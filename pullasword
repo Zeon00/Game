@@ -99,11 +99,11 @@ local Toggle = MainTab:CreateToggle({
    Callback = function(Value)
       _G.AutoClick = true
       while _G.AutoClick == true do
-task.wait(2.0)
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer("1")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer("34")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer("0")
-end
+      task.wait(2.0)
+      game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer("1")
+      game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer("34")
+      game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer("0")
+      end
         print("FARMING")
    end,
 })
