@@ -61,7 +61,7 @@ end
    end,
 })
 
-local Button = Tab:CreateButton({
+local Button = MainTab:CreateButton({
    Name = "Auto Swing",
    Callback = function()
    _G.autoswing = v
