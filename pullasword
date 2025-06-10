@@ -86,7 +86,9 @@ local Toggle = MainTab:CreateToggle({
       while _G.AutoClick == true do
       task.wait()
       game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("RebirthEvent"):FireServer()
- end
+      game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SuperRebirthEvent"):FireServer()
+
+end
         print("FARMING")
    end,
 })
