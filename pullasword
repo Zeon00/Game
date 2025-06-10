@@ -72,6 +72,7 @@ local Toggle = MainTab:CreateToggle({
             wait()
             game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
             wait()
+	if _G.autoswing == false then return end
         end
         print("FARMING")
    end,
