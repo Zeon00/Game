@@ -106,7 +106,7 @@ end
 })
 
 local Toggle = MainTab:CreateToggle({
-   Name = "Auto World Boss 8",
+   Name = "Auto  Boss 8",
    CurrentValue = false,
    Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
    Callback = function(Value)
@@ -118,6 +118,7 @@ local Toggle = MainTab:CreateToggle({
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinBossEvent"):FireServer("Boss8")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Hard")
 local args = {
 	0
 }
@@ -127,7 +128,27 @@ end
    end,
 })
 
-
+local Toggle = MainTab:CreateToggle({
+   Name = "Auto  WORld Boss 8",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+      _G.AutoClick = true
+      while _G.AutoClick == true do
+      task.wait(0.1)
+      local args = {
+	1
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Hard")
+local args = {
+	0
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+end
+        print("FARMING")
+   end,
+})
 local Toggle = MainTab:CreateToggle({
    Name = "Auto World Boss",
    CurrentValue = false,
