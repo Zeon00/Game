@@ -61,6 +61,34 @@ end
    end,
 })
 local Toggle = MainTab:CreateToggle({
+   Name = "Auto PVP ",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+      _G.AutoClick = true
+while _G.AutoClick == true do
+task.wait()
+local args = {
+	1
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+
+local args = {
+	"Breadduty",
+	true,
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent_PVP"):FireServer(unpack(args))
+local args = {
+	0
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+
+end
+        print("FARMING")
+   end,
+})
+local Toggle = MainTab:CreateToggle({
    Name = "Auto Claim Spin",
    CurrentValue = false,
    Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
