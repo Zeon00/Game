@@ -1,191 +1,113 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
 local Window = Rayfield:CreateWindow({
-   Name = "🔥 Sasuke Hub | Game 🔥 ",
-   LoadingTitle = "🔥Pull A Sword🔥",
+   Name = "Arm Wrestling Simulator",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "Script Hub",
    LoadingSubtitle = "by Benz",
+   Theme = "Ocean", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
    ConfigurationSaving = {
-      Enabled = false,
+      Enabled = true,
       FolderName = nil, -- Create a custom folder for your hub/game
-      FileName = "Example Hub"
+      FileName = "Arm Wrestling Simulator"
    },
+
    Discord = {
-      Enabled = false,
-      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ABCD would be ABCD
-      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = false -- Set this to false to make them join the discord every time they load it up
    },
+
    KeySystem = false, -- Set this to true to use our key system
    KeySettings = {
-      Title = "Key | Youtube Hub",
+      Title = "Pls Put The Key",
       Subtitle = "Key System",
-      Note = "Key In Discord Server",
-      FileName = "YoutubeHubKey1", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
-      SaveKey = false, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-      GrabKeyFromSite = true, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
-      Key = {"https://pastebin.com/raw/AtgzSPWK"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+      Note = "https://paste-drop.com/paste/v4Fsa0iHsL", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Key-2"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
    }
 })
-
-local MainTab = Window:CreateTab("🏠 Home", nil) -- Title, Image
-local MainSection = MainTab:CreateSection("Main")
-
 Rayfield:Notify({
-   Title = "You executed the script",
-   Content = "Very cool gui",
-   Duration = 5,
-   Image = 13047715178,
-   Actions = { -- Notification Buttons
-      Ignore = {
-         Name = "Okay!",
-         Callback = function()
-         print("The user tapped Okay!")
+   Title = "Arm Wrestle Simulator",
+   Content = "Welcome",
+   Duration = 4.5,
+   Image = 4483362458,
+})
+local Tab = Window:CreateTab("Main", 4483362458) -- Title, Image
+local Section = Tab:CreateSection("Main")
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Swing",
+   CurrentValue = false,
+   Flag = "toggle1",
+   Callback = function(CurrentValue)
+      if CurrentValue then
+         -- Start the loop
+         _G.loop4 = true
+         while _G.loop4 do
+            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
+            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
+            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
+            wait() -- Adjust the wait time as needed
+         end
+      else
+         -- Stop the loop
+         _G.loop4 = false
       end
-   },
-},
-})
-
-local Toggle = MainTab:CreateToggle({
-   Name = "Stop All Auto ",
-   CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = false
-while _G.AutoClick == true do
-task.wait()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-
-end
-        print("FARMING")
    end,
 })
-local Toggle = MainTab:CreateToggle({
-   Name = "Auto PVP ",
-   CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-while _G.AutoClick == true do
-task.wait()
-local args = {
-	1
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-
-local args = {
-	"Breadduty",
-	true,
-	true
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent_PVP"):FireServer(unpack(args))
-local args = {
-	0
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-
-end
-        print("FARMING")
-   end,
-})
-local Toggle = MainTab:CreateToggle({
+local Toggle = Tab:CreateToggle({
    Name = "Auto Claim Spin",
    CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-     _G.AutoClick = true
-	while _G.AutoClick == true do
-	task.wait()
-	game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SpaceEggEvent"):FireServer()
-	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("GetCreditsEvent"):FireServer()
-	end
+   Flag = "toggle1",
+   Callback = function(CurrentValue)
+      if CurrentValue then
+         -- Start the loop
+         _G.loop4 = true
+         while _G.loop4 do
+                game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SpaceEggEvent"):FireServer()
+	            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("GetCreditsEvent"):FireServer()
+         	wait() -- Adjust the wait time as needed
+         end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
    end,
 })
-local Toggle = MainTab:CreateToggle({
-   Name = "Swing Auto ",
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Rebirth and Super Rebirth",
    CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-while _G.AutoClick == true do
-task.wait()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-
-end
-        print("FARMING")
+   Flag = "toggle1",
+   Callback = function(CurrentValue)
+      if CurrentValue then
+         -- Start the loop
+         _G.loop4 = true
+         while _G.loop4 do
+                game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("RebirthEvent"):FireServer()
+               game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SuperRebirthEvent"):FireServer()
+             wait() -- Adjust the wait time as needed
+         end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
    end,
 })
-local Toggle = MainTab:CreateToggle({
-   Name = "Auto Rebith and Super Rebirth",
+local Toggle = Tab:CreateToggle({
+   Name = "World Boss",
    CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-      while _G.AutoClick == true do
-      task.wait()
-      game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("RebirthEvent"):FireServer()
-      game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SuperRebirthEvent"):FireServer()
-
-end
-        print("FARMING")
-   end,
-})
-
-local Toggle = MainTab:CreateToggle({
-   Name = "Auto  Boss 8",
-   CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-      while _G.AutoClick == true do
-      task.wait(0.1)
-      local args = {
-	1
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinBossEvent"):FireServer("Boss8")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Hard")
-local args = {
-	0
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-end
-        print("FARMING")
-   end,
-})
-
-local Toggle = MainTab:CreateToggle({
-   Name = "Auto  WORld Boss 8",
-   CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-      while _G.AutoClick == true do
-      task.wait(0.1)
-      local args = {
-	1
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Hard")
-local args = {
-	0
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-end
-        print("FARMING")
-   end,
-})
-local Toggle = MainTab:CreateToggle({
-   Name = "Auto World Boss",
-   CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-      while _G.AutoClick == true do
-      task.wait(0.1)
-      local args = {
+   Flag = "toggle1",
+   Callback = function(CurrentValue)
+      if CurrentValue then
+         -- Start the loop
+         _G.loop4 = true
+         while _G.loop4 do
+             local args = {
 	1
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
@@ -220,26 +142,29 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon5","Chaos")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon6","Chaos")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon7","Chaos")
-
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Chaos")
 local args = {
 	0
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-end
-        print("FARMING")
+wait(0.1) -- Adjust the wait time as needed
+         end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
    end,
 })
-
-
-local Toggle = MainTab:CreateToggle({
-   Name = "Auto Event Boss",
+local Toggle = Tab:CreateToggle({
+   Name = "Auto World Event",
    CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-while _G.AutoClick == true do
-task.wait(0.25)
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+   Flag = "toggle1",
+   Callback = function(CurrentValue)
+      if CurrentValue then
+         -- Start the loop
+         _G.loop4 = true
+         while _G.loop4 do
+            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-151")
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-150")
@@ -253,42 +178,20 @@ game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("W
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-150")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-end
-        print("FARMING")
-   end,
-})
-local Toggle = MainTab:CreateToggle({
-   Name = "Auto Event Sword ",
-   CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      _G.AutoClick = true
-      while _G.AutoClick == true do
-      task.wait(2)
-      	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-     	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10001")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10002")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10003")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10004")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10005")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10006")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10007")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10008")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10009")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10010")
-   	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10011")
-	game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer("10012")
-  	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+wait(0.2) -- Adjust the wait time as needed
+         end
+      else
+         -- Stop the loop
+         _G.loop4 = false
       end
-        print("FARMING")
    end,
 })
-local Toggle = MainTab:CreateToggle({
-   Name = "anti AFK",
-   CurrentValue = false,
-   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-      wait(0.5)local ba=Instance.new("ScreenGui")
+
+local Section = Tab:CreateSection("Teleport")
+local Button = Tab:CreateButton({
+   Name = "ANTI AFK",
+   Callback = function()
+wait(0.5)local ba=Instance.new("ScreenGui")
 local ca=Instance.new("TextLabel")local da=Instance.new("Frame")
 local _b=Instance.new("TextLabel")local ab=Instance.new("TextLabel")ba.Parent=game.CoreGui
 ba.ZIndexBehavior=Enum.ZIndexBehavior.Sibling;ca.Parent=ba;ca.Active=true
@@ -307,5 +210,38 @@ ab.TextColor3=Color3.new(0,1,1)ab.TextSize=20;local bb=game:service'VirtualUser'
 game:service'Players'.LocalPlayer.Idled:connect(function()
 bb:CaptureController()bb:ClickButton2(Vector2.new())
 ab.Text="Roblox tried to kick u but i kicked him instead"wait(2)ab.Text="Status : Active"end) 
+   end,
+})
+local Tab = Window:CreateTab("Credits", 4483362458) -- Title, Image
+local Section = Tab:CreateSection("Credits")
+local Section = Tab:CreateSection("Join the Discord For more Script")
+local Button = Tab:CreateButton({
+   Name = "Toledo",
+   Callback = function()
+
+   end,
+})
+local Button = Tab:CreateButton({
+   Name = "Rei",
+   Callback = function()
+
+   end,
+})
+local Button = Tab:CreateButton({
+   Name = "Rabbid Bojo",
+   Callback = function()
+
+   end,
+})
+local Button = Tab:CreateButton({
+   Name = "Copy YT: Toledo_Channels",
+   Callback = function()
+setclipboard("https://youtube.com/@toledo_channels?si=Yn1hlgU1nsraIajP")
+   end,
+})
+local Button = Tab:CreateButton({
+   Name = "Copy Discord",
+   Callback = function()
+setclipboard("https://discord.gg/fj5GRG5d")
    end,
 })
