@@ -49,7 +49,6 @@ local Toggle = Tab:CreateToggle({
          -- Start the loop
          _G.loop4 = true
          while _G.loop4 do
-            task.wait() -- Adjust the wait time as needed
             game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()ame:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("SettingEventRS"):FireServer("AutoTrainer",true)
             game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","5")
 	    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","1")
@@ -63,7 +62,8 @@ local Toggle = Tab:CreateToggle({
 	    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer(3)
 	    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer(4)
 	    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-        end
+            task.wait() -- Adjust the wait time as needed  
+	end
       else
          -- Stop the loop
          _G.loop4 = false
@@ -79,10 +79,10 @@ local Toggle = Tab:CreateToggle({
          -- Start the loop
          _G.loop4 = true
          while _G.loop4 do
-            task.wait() -- Adjust the wait time as needed
             game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnFightAttributeChange"):FireServer(AutoTrain",true)
             game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("SettingEventRS"):FireServer("AutoTrainer",true)
-         end
+            task.wait() -- Adjust the wait time as needed
+	end
       else
          -- Stop the loop
          _G.loop4 = false
