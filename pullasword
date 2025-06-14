@@ -70,8 +70,141 @@ local Toggle = Tab:CreateToggle({
          _G.loop4 = true
          while _G.loop4 do
                 game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SpaceEggEvent"):FireServer()
-	            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("GetCreditsEvent"):FireServer()
-         	wait() -- Adjust the wait time as needed
+	        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("GetCreditsEvent"):FireServer()
+         	local args = {"5"}
+		wait() -- Adjust the wait time as needed
+         end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
+   end,
+})
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Shop Potion",
+   CurrentValue = false,
+   Flag = "toggle1",
+   Callback = function(CurrentValue)
+      if CurrentValue then
+         -- Start the loop
+         _G.loop4 = true
+         while _G.loop4 do
+                local args = {"Buy",2,1}
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
+                local args = {"Buy",2,2}
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
+                local args = {"Buy",2,3}
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
+                local args = {"Buy",2,4}
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
+                wait(60) -- Adjust the wait time as needed
+         end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
+   end,
+})
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Huge Sword",
+   CurrentValue = false,
+   Flag = "toggle1",
+   Callback = function(CurrentValue)
+      if CurrentValue then
+         -- Start the loop
+         _G.loop4 = true
+         while _G.loop4 do
+		local args = {1}
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+                local args = {"7","Start"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Click"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {"7","Leave"}
+                game:GetService("ReplicatedStorage"):WaitForChild("TowerEventRemotes"):WaitForChild("HugeSwordRewardsEvent"):FireServer(unpack(args))
+                local args = {0}
+                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+                wait() -- Adjust the wait time as needed
          end
       else
          -- Stop the loop
