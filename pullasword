@@ -92,7 +92,7 @@ local Toggle = Tab:CreateToggle({
 	    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer(40)
 	    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer(41)
 	    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-            task.wait(2) -- Adjust the wait time as needed  
+            task.wait(5) -- Adjust the wait time as needed  
 	end
       else
          -- Stop the loop
