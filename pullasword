@@ -656,7 +656,7 @@ task.wait(0.1) -- Adjust the wait time as needed
          _G.loop4 = false
       end
    end,
-}))
+})
 local Button = Tab:CreateButton({
    Name = "world Boss",
    Callback = function(CurrentValue)
