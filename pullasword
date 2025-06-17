@@ -98,7 +98,7 @@ tgls:Toggle("Mob Bos 42",false, function(bool)
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer(42)
 				local args = {0}
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
+				task.wait(2) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
