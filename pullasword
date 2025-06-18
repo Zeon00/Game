@@ -25,51 +25,7 @@ tgls:Toggle("Auto Battle Toogle",false, function(bool)
          _G.loop4 = true
 			while _G.loop4 do
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","42")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","41")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("MegaBoss","Dragon8","Hard")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("MegaBoss","Dragon8","Normal")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","40")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","39")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","38")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","37")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Boss","Boss8")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Boss","Boss7")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Boss","Boss6")
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Boss","Boss5")
 				local args = {1}
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 				task.wait(0.1) -- Adjust the wait time as needed
@@ -148,190 +104,163 @@ tgls:Toggle("Auto Rebirth and Super Rebirth",false, function(bool)
       end
 		print(bool)
 	end)
-local tgls = serv:Channel("Mob Boss")
-tgls:Toggle("Mob Bos 42",false, function(bool)
-      if bool then
+local serv = win:Server("World Boss", "")
+local tgls = serv:Channel("Brick Kong")
+tgls:Toggle("Normal",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer(42)
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(2) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Normal")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(0.1) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-local tgls = serv:Channel("World Boss")
-tgls:Toggle("Dragon 8 Normal",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+tgls:Toggle("Hard",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Normal")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Hard")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(0.1) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-tgls:Toggle("Dragon 8 Hard",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+tgls:Toggle("Chaos",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Hard")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Chaos")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(0.1) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-tgls:Toggle("Dragon 8 Chaos",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+
+local tgls = serv:Channel("Hydra")
+tgls:Toggle("Normal",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Chaos")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Normal")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(0.1) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-tgls:Toggle("Dragon 9 Normal",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+tgls:Toggle("Hard",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Normal")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Hard")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(0.1) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-tgls:Toggle("Dragon 9 Hard",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+tgls:Toggle("Chaos",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Hard")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Chaos")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(0.1) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-tgls:Toggle("Dragon 9 Chaos",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+local tgls = serv:Channel("Boss Stage")
+tgls:Toggle("Vortex",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Chaos")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinBossEvent"):FireServer("Boss8")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(3) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-	
-local tgls = serv:Channel("Event Battle")
-tgls:Toggle("World Boss",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+local serv = win:Server("Event Battle", "")
+local tgls = serv:Channel("Event Boss")
+tgls:Toggle("Magma dragon",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(0.1) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-tgls:Toggle("Mob Boss 1",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+tgls:Toggle("Dark Prince",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-150")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-150")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(5) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)
-tgls:Toggle("Mob Boss 2",false, function(bool)
-      if bool then
+print(CurrentValue)
+end)
+tgls:Toggle("Demon Lord",false, function(CurrentValue)
+      if CurrentValue then
          -- Start the loop
          _G.loop4 = true
-			while _G.loop4 do
-				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-151")
-				local args = {0}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
+         while _G.loop4 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
+game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-151")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+task.wait(5) 
+         end
       else
-         -- Stop the loop
          _G.loop4 = false
       end
-		print(bool)
-	end)	
+print(CurrentValue)
+end)	
 local btns = serv:Channel("Other")
 btns:Seperator()
 btns:Button("Anti AFK", function()
