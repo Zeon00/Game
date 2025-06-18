@@ -36,6 +36,40 @@ tgls:Toggle("Auto World Boss Toogle",false, function(bool)
       end
 		print(bool)
 	end)
+tgls:Toggle("Auto World Boss Toogle",false, function(bool)
+      if bool then
+         -- Start the loop
+         _G.loop4 = true
+			while _G.loop4 do
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("MegaBoss","Dragon8","Normal")
+				local args = {1}
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+				task.wait(0.1) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
+		print(bool)
+	end)
+tgls:Toggle("Auto World Boss Toogle",false, function(bool)
+      if bool then
+         -- Start the loop
+         _G.loop4 = true
+			while _G.loop4 do
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("MegaBoss","Dragon7","Chaos")
+				local args = {1}
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+				task.wait(0.1) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
+		print(bool)
+	end)	
 tgls:Toggle("Auto World Event Toogle",false, function(bool)
       if bool then
          -- Start the loop
@@ -45,7 +79,8 @@ tgls:Toggle("Auto World Event Toogle",false, function(bool)
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("MegaBoss","Dragon-151","Normal")
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","Dragon-151")
 				local args = {1}
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))				task.wait(0.1) -- Adjust the wait time as needed
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))				
+				task.wait(0.1) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
@@ -53,6 +88,24 @@ tgls:Toggle("Auto World Event Toogle",false, function(bool)
       end
 		print(bool)
 	end)
+tgls:Toggle("Auto World Event Toogle",false, function(bool)
+      if bool then
+         -- Start the loop
+         _G.loop4 = true
+			while _G.loop4 do
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("MegaBoss","Dragon-151","Normal")
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("Mobs","Dragon-151")
+				local args = {1}
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))				
+				task.wait(0.1) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.loop4 = false
+      end
+		print(bool)
+	end)	
 tgls:Toggle("Auto Swing",false, function(bool)
       if bool then
          -- Start the loop
