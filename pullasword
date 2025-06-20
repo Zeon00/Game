@@ -3,7 +3,7 @@ local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/daw
 local win = DiscordLib:Window("discord library")
 
 local serv = win:Server("Menu", "")
-local btns = serv:Channel("Player")
+local tgls = serv:Channel("Player")
 btns:Button("Auto Swing Toogle", function()
         local run = true
 			while run == true do   
@@ -54,6 +54,8 @@ btns:Button("Auto Claim Spin", function()
 			end
 	end)	
 btns:Seperator()	
+
+local serv = win:Server("World Boss", "")
 local tgls = serv:Channel("Rebirth") 
 tgls:Toggle("Auto Rebirth",false, function(bool)
       if bool then
@@ -70,7 +72,6 @@ tgls:Toggle("Auto Rebirth",false, function(bool)
       end
 		print(bool)
 	end)
-local serv = win:Server("World Boss", "")
 local tgls = serv:Channel("Brick Kong")
 tgls:Toggle("Normal",false, function(CurrentValue)
       if CurrentValue then
