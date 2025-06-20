@@ -53,7 +53,7 @@ btns:Button("Auto Claim Spin", function()
 				task.wait() -- Adjust the wait time as needed
 			end
 	end)	
-	
+btns:Seperator()	
 local tgls = serv:Channel("Rebirth") 
 tgls:Toggle("Auto Rebirth",false, function(bool)
       if bool then
