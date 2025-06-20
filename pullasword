@@ -1,38 +1,48 @@
 local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 
 local win = DiscordLib:Window("discord library")
-
 local serv = win:Server("Menu", "")
-local btns = serv:Channel("Player")
-btns:Button("Auto Swing Toogle", function()
-        local run = true
-			while run == true do   
+local tgls = serv:Channel("Player")
+tgls:Toggle("Auto Swing Toogle",false, function(swing)
+      if swing then
+         -- Start the loop
+         _G.loopswing = true
+			while _G.loopswing do
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnFightAttributeChange"):FireServer("AutoTrain",true)
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("SettingEventRS"):FireServer("AutoTrainer",true)
 				task.wait() -- Adjust the wait time as needed
 			end
+      else
+         -- Stop the loop
+         _G.loopswing = false
+      end
+		print(swing)
 	end)
-btns:Button("Auto World Boss Toogle", function()
-        local run = true
-			while run == true do   
+tgls:Toggle("Auto World Boss Toogle",false, function(wboss)
+      if wboss then
+         -- Start the loop
+         _G.loopwboss = true
+			while _G.loopwboss do
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer("MegaBoss","Dragon8","Hard")
 				local args = {1}
 				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
+				local args = {0}
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 				task.wait() -- Adjust the wait time as needed
 			end
+      else
+         -- Stop the loop
+         _G.loopwboss = false
+      end
+		print(wboss)
 	end)
-btns:Button("Auto Swing", function()
-        local run = true
-			while run == true do   
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-				task.wait() -- Adjust the wait time as needed
-			end
-	end)
-btns:Button("Auto Buy Potion", function()
-        local run = true
-			while run == true do   
+tgls:Toggle("Auto Buy Potion",false, function(potion)
+      if potion then
+         -- Start the loop
+         _G.looppotion = true
+			while _G.looppotion do
 				local args = {"Buy",2,1}
                 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
                 local args = {"Buy",2,2}
@@ -43,70 +53,97 @@ btns:Button("Auto Buy Potion", function()
                 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
 				task.wait() -- Adjust the wait time as needed
 			end
+      else
+         -- Stop the loop
+         _G.looppotion = false
+      end
+		print(potion)
 	end)
-btns:Button("Auto Claim Spin", function()
-        local run = true
-			while run == true do   
+tgls:Toggle("Auto Claim Spin",false, function(spin)
+      if spin then
+         -- Start the loop
+         _G.loopspin = true
+			while _G.loopspin do 
 				game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SpaceEggEvent"):FireServer()
 	            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("GetCreditsEvent"):FireServer()
 				task.wait() -- Adjust the wait time as needed
 			end
+      else
+         -- Stop the loop
+         _G.loopspin = false
+      end
+		print(spin)
 	end)	
-btns:Seperator()	
-
-local serv = win:Server("World Boss", "")
 local tgls = serv:Channel("Rebirth") 
-tgls:Toggle("Auto Rebirth",false, function(bool)
-      if bool then
+tgls:Toggle("Auto Swing",false, function(swing1)
+      if swing1 then
          -- Start the loop
-         _G.loop4 = true
-			while _G.loop4 do
+         _G.loopswing1 = true
+			while _G.loopswing1 do
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
+				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
+				task.wait() -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.loopswing1 = false
+      end
+		print(swing1)
+	end)
+tgls:Toggle("Auto Rebirth",false, function(rebirth)
+      if rebirth then
+         -- Start the loop
+         _G.looprebirth = true
+			while _G.looprebirth do
 				game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("RebirthEvent"):FireServer()
                 game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SuperRebirthEvent"):FireServer()
 				task.wait() -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
-         _G.loop4 = false
+         _G.looprebirth = false
       end
-		print(bool)
+		print(rebirth)
 	end)
+
+local serv = win:Server("World Boss", "")
 local tgls = serv:Channel("Brick Kong")
 tgls:Toggle("Normal",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop1 = true
+         while _G.loop1 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Normal")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait(0.1) 
          end
       else
-         _G.loop4 = false
+         _G.loop1 = false
       end
 print(CurrentValue)
 end)
 tgls:Toggle("Hard",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop2 = true
+         while _G.loop2 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Hard")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait() 
          end
       else
-         _G.loop4 = false
+         _G.loop2 = false
       end
 print(CurrentValue)
 end)
 tgls:Toggle("Chaos",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop3 = true
+         while _G.loop3 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Chaos")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
@@ -116,7 +153,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
 task.wait() 
          end
       else
-         _G.loop4 = false
+         _G.loop3 = false
       end
 print(CurrentValue)
 end)
@@ -140,30 +177,30 @@ end)
 tgls:Toggle("Hard",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop5 = true
+         while _G.loop5 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Hard")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait(0.1) 
          end
       else
-         _G.loop4 = false
+         _G.loop5 = false
       end
 print(CurrentValue)
 end)
 tgls:Toggle("Chaos",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop6 = true
+         while _G.loop6 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Chaos")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait(0.1) 
          end
       else
-         _G.loop4 = false
+         _G.loop6 = false
       end
 print(CurrentValue)
 end)
@@ -171,15 +208,15 @@ local tgls = serv:Channel("Boss Stage")
 tgls:Toggle("Vortex",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop7 = true
+         while _G.loop7 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinBossEvent"):FireServer("Boss8")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait(0.1) 
          end
       else
-         _G.loop4 = false
+         _G.loop7 = false
       end
 print(CurrentValue)
 end)
@@ -188,45 +225,45 @@ local tgls = serv:Channel("Event Boss")
 tgls:Toggle("Magma dragon",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop8 = true
+         while _G.loop8 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait() 
          end
       else
-         _G.loop4 = false
+         _G.loop8 = false
       end
 print(CurrentValue)
 end)
 tgls:Toggle("Dark Prince",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop9 = true
+         while _G.loop9 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-150")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait(5) 
          end
       else
-         _G.loop4 = false
+         _G.loop9 = false
       end
 print(CurrentValue)
 end)
 tgls:Toggle("Demon Lord",false, function(CurrentValue)
       if CurrentValue then
          -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
+         _G.loop0 = true
+         while _G.loop0 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-151")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait(5) 
          end
       else
-         _G.loop4 = false
+         _G.loop0 = false
       end
 print(CurrentValue)
 end)	
