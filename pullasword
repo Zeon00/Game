@@ -4,7 +4,7 @@ local win = DiscordLib:Window("discord library")
 
 local serv = win:Server("Menu", "")
 local tgls = serv:Channel("Player")
-tgls:Toggle("Auto Swing Toogle",true, function(bool)
+tgls:Toggle("Auto Swing Toogle",false, function(bool)
       if bool then
          -- Start the loop
          _G.loop4 = true
@@ -19,7 +19,7 @@ tgls:Toggle("Auto Swing Toogle",true, function(bool)
       end
 		print(bool)
 	end)
-tgls:Toggle("Auto World Boss Toogle",true, function(bool)
+tgls:Toggle("Auto World Boss Toogle",false, function(bool)
       if bool then
          -- Start the loop
          _G.loop4 = true
@@ -122,7 +122,7 @@ tgls:Toggle("Auto Swing",true, function(bool)
       end
 		print(bool)
 	end)
-tgls:Toggle("Auto Claim Spin",true, function(bool)
+tgls:Toggle("Auto Claim Spin",false, function(bool)
       if bool then
          -- Start the loop
          _G.loop4 = true
@@ -137,7 +137,7 @@ tgls:Toggle("Auto Claim Spin",true, function(bool)
       end
 		print(bool)
 	end)
-tgls:Toggle("Auto Buy Potion",true, function(bool)
+tgls:Toggle("Auto Buy Potion",false, function(bool)
       if bool then
          -- Start the loop
          _G.loop4 = true
