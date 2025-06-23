@@ -135,23 +135,21 @@ task.wait()
       end
 print(CurrentValue)
 end)
-tgls:Toggle("Chaos",false, function(CurrentValue)
-      if CurrentValue then
+tgls:Toggle("Chaos",false, function(Chaos)
+      if Chaos then
          -- Start the loop
-         _G.loop3 = true
-         while _G.loop3 do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Chaos")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
+         _G.Chaos1 = true
+         while _G.Chaos1 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Chaos")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait() 
          end
       else
-         _G.loop3 = false
+         _G.Chaos1 = false
       end
-print(CurrentValue)
+print(Chaos)
 end)
 
 local tgls = serv:Channel("Hydra")
