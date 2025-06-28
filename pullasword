@@ -304,6 +304,17 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
 		print(Chaos)
 	end)
 	
-	tgls:Toggle("Fly",false, function()
-	game:GetService("Players").LocalPlayer.Character.Humanoid.HipHeight = 12
+tgls:Toggle("FLY",false, function(fly)
+      if fly then
+         -- Start the loop
+         _G.fly1 = true
+			while true do
+game:GetService("Players").LocalPlayer.Character.Humanoid.HipHeight = 12				
+task.wait(0.1) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.fly1 = false
+      end
+		print(fly)
 	end)
