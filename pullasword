@@ -295,7 +295,7 @@ tgls:Toggle("Dungeon Chaos",false, function(Chaos)
 			while _G.Chaos1 do
 local args = {"Chaos"}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
-				wait(30) -- Adjust the wait time as needed
+				wait(1) -- Adjust the wait time as needed
 			
 			end
       else
