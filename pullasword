@@ -304,7 +304,20 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
       end
 		print(Chaos)
 	end)
-	
+tgls:Toggle("Leave Dungeon Chaos",false, function(Leave)
+      if Leave then
+         -- Start the loop
+         _G.Leave1 = true
+			while _G.Leave1 do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnLeaveDungeon"):FireServer()
+				wait(5) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.Leave1 = false
+      end
+		print(Leave)
+	end)	
 tgls:Toggle("Fly",false, function()
 game:GetService("Players").LocalPlayer.Character.Humanoid.HipHeight = 12				
 -- Adjust the wait time as needed
