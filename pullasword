@@ -309,7 +309,7 @@ tgls:Toggle("Leave Dungeon Chaos",false, function(Leave)
          _G.Leave1 = true
 			while _G.Leave1 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnLeaveDungeon"):FireServer()
-				wait(5) -- Adjust the wait time as needed
+				wait(25) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
