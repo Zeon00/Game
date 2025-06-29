@@ -295,7 +295,8 @@ tgls:Toggle("Dungeon Chaos",false, function(Chaos)
 			while _G.Chaos1 do
 local args = {"Chaos"}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
+				wait(30) -- Adjust the wait time as needed
+			
 			end
       else
          -- Stop the loop
@@ -304,17 +305,13 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
 		print(Chaos)
 	end)
 	
-tgls:Toggle("FLY",false, function(fly)
-      if fly then
-         -- Start the loop
-         _G.fly1 = true
-			while true do
+tgls:Toggle("Fly",false, function()
 game:GetService("Players").LocalPlayer.Character.Humanoid.HipHeight = 12				
-task.wait(0.1) -- Adjust the wait time as needed
-			end
-      else
-         -- Stop the loop
-         _G.fly1 = false
-      end
-		print(fly)
-	end)
+-- Adjust the wait time as needed
+end)
+
+tgls:Toggle("UnFly",false, function()
+game:GetService("Players").LocalPlayer.Character.Humanoid.HipHeight = 1				
+-- Adjust the wait time as needed
+
+end)
