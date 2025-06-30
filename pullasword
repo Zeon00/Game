@@ -295,10 +295,7 @@ tgls:Toggle("Dungeon Chaos",false, function(Chaos)
 task.wait(1)
 local args = {"Chaos"}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
-task.wait(3)
-game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-4927.02880859375, 20.771587371826172, 188.39039611816406)
-
-			end
+end
       else
          -- Stop the loop
          _G.Chaos1 = false
