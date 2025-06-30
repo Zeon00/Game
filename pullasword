@@ -292,11 +292,12 @@ tgls:Toggle("Dungeon Chaos",false, function(Chaos)
          -- Start the loop
          _G.Chaos1 = true
 	while _G.Chaos1 do
+task.wait(1)
 local args = {"Chaos"}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
+task.wait(1.5)
 game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-9040.76953125, 20.771587371826172, 1344.7843017578125)
-wait(1) -- Adjust the wait time as needed
-			
+
 			end
       else
          -- Stop the loop
