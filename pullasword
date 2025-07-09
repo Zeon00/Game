@@ -1,10 +1,40 @@
-local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
+local GUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/BloodLetters/Ash-Libs/refs/heads/main/source.lua"))()
+GUI:CreateMain({
+    Name = "Ashlabs",
+    title = "Pull A Sword",
+    ToggleUI = "K",
+    WindowIcon = "home", -- you can use lucid icons
+    -- WindowHeight = 600, -- default height
+    -- WindowWidth = 800, -- default width
+    Theme = {
+        Background = Color3.fromRGB(25, 25, 35),
+        Secondary = Color3.fromRGB(35, 35, 45),
+        Accent = Color3.fromRGB(138, 43, 226),
+        Text = Color3.fromRGB(255, 255, 255),
+        TextSecondary = Color3.fromRGB(180, 180, 180),
+        Border = Color3.fromRGB(50, 50, 60),
+        NavBackground = Color3.fromRGB(20, 20, 30)
+    },
+    Blur = { -- Buggy
+        Enable = false, -- transparent option
+        value = 0.2
+    },
+    Config = { -- not implemented yet
+        Enabled = false,
+    }
+})
 
-local win = DiscordLib:Window("discord library")
-local serv = win:Server("Menu", "")
-local tgls = serv:Channel("Player")
-tgls:Toggle("Auto Swing Toogle",false, function(swing)
-      if swing then
+local main = GUI:CreateTab("Main", "user-round") -- You can use IconID we didnt impleemnt lucid or any external icons
+GUI:CreateSection({
+    parent = main, 
+    text = "Player"
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Swing Toogle", 
+    default = false, 
+    callback = function(swing)
+	if swing then
          -- Start the loop
          _G.loopswing = true
 			while _G.loopswing do
@@ -16,10 +46,17 @@ tgls:Toggle("Auto Swing Toogle",false, function(swing)
          -- Stop the loop
          _G.loopswing = false
       end
-		print(swing)
-	end)
-tgls:Toggle("Auto World Boss Toogle",false, function(wboss)
-      if wboss then
+        print("Toggle state:", swing)
+    end
+})
+
+
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto  World Boss Toogle", 
+    default = false, 
+    callback = function(wboss)
+if wboss then
          -- Start the loop
          _G.loopwboss = true
 			while _G.loopwboss do
@@ -32,10 +69,16 @@ tgls:Toggle("Auto World Boss Toogle",false, function(wboss)
          -- Stop the loop
          _G.loopwboss = false
       end
-		print(wboss)
-	end)
-tgls:Toggle("Auto Buy Potion",false, function(potion)
-      if potion then
+		print("Toggle state:", wboss)
+   end
+})
+	
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Buy Potion", 
+    default = false, 
+    callback = function(potion)
+if potion then
          -- Start the loop
          _G.looppotion = true
 			while _G.looppotion do
@@ -53,10 +96,16 @@ tgls:Toggle("Auto Buy Potion",false, function(potion)
          -- Stop the loop
          _G.looppotion = false
       end
-		print(potion)
-	end)
-tgls:Toggle("Auto Claim Spin",false, function(spin)
-      if spin then
+		print("Toggle state:", potion)
+   end
+})
+
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Spin Online", 
+    default = false, 
+    callback = function(spin)
+	 if spin then
          -- Start the loop
          _G.loopspin = true
 			while _G.loopspin do 
@@ -68,26 +117,15 @@ tgls:Toggle("Auto Claim Spin",false, function(spin)
          -- Stop the loop
          _G.loopspin = false
       end
-		print(spin)
-	end)	
-local tgls = serv:Channel("Rebirth") 
-tgls:Toggle("Auto Swing",false, function(swing1)
-      if swing1 then
-         -- Start the loop
-         _G.loopswing1 = true
-			while _G.loopswing1 do
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
-				game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
-				task.wait() -- Adjust the wait time as needed
-			end
-      else
-         -- Stop the loop
-         _G.loopswing1 = false
-      end
-		print(swing1)
-	end)
-tgls:Toggle("Auto Rebirth",false, function(rebirth)
+		print("Toggle state:", spin)
+   end
+})
+
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Spin Online", 
+    default = false, 
+    callback = function(rebirth)
       if rebirth then
          -- Start the loop
          _G.looprebirth = true
@@ -100,13 +138,21 @@ tgls:Toggle("Auto Rebirth",false, function(rebirth)
          -- Stop the loop
          _G.looprebirth = false
       end
-		print(rebirth)
-	end)
+	  		print("Toggle state:", rebirth)
+   end
+})
 
-local serv = win:Server("World Boss", "")
-local tgls = serv:Channel("Brick Kong")
-tgls:Toggle("Normal",false, function(CurrentValue)
-      if CurrentValue then
+local main = GUI:CreateTab("World Boss", "sun") -- You can use IconID we didnt impleemnt lucid or any external icons
+GUI:CreateSection({
+    parent = main, 
+    text = "Brick Kong"
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Normal", 
+    default = false, 
+    callback = function(Normal)
+      if Normal then
          -- Start the loop
          _G.loop1 = true
          while _G.loop1 do
@@ -118,10 +164,15 @@ task.wait(0.1)
       else
          _G.loop1 = false
       end
-print(CurrentValue)
-end)
-tgls:Toggle("Hard",false, function(CurrentValue)
-      if CurrentValue then
+	  		print("Toggle state:", Normal)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Hard", 
+    default = false, 
+    callback = function(hard)
+if hard then
          -- Start the loop
          _G.loop2 = true
          while _G.loop2 do
@@ -133,15 +184,19 @@ task.wait()
       else
          _G.loop2 = false
       end
-print(CurrentValue)
-end)
-tgls:Toggle("Chaos",false, function(Chaos)
+	  		print("Toggle state:", hard)
+   end
+})
+
+GUI:CreateToggle({
+    parent = main, 
+    text = "Chaos", 
+    default = false, 
+    callback = function(chaos)
       if Chaos then
-         -- Start the loop
          _G.Chaos1 = true
          while _G.Chaos1 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon8","Chaos")
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
 task.wait() 
@@ -149,58 +204,15 @@ task.wait()
       else
          _G.Chaos1 = false
       end
-print(Chaos)
-end)
-
-local tgls = serv:Channel("Hydra")
-tgls:Toggle("Normal",false, function(CurrentValue)
-      if CurrentValue then
-         -- Start the loop
-         _G.loop4 = true
-         while _G.loop4 do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Normal")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-task.wait(0.1) 
-         end
-      else
-         _G.loop4 = false
-      end
-print(CurrentValue)
-end)
-tgls:Toggle("Hard",false, function(CurrentValue)
-      if CurrentValue then
-         -- Start the loop
-         _G.loop5 = true
-         while _G.loop5 do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Hard")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-task.wait(0.1) 
-         end
-      else
-         _G.loop5 = false
-      end
-print(CurrentValue)
-end)
-tgls:Toggle("Chaos",false, function(CurrentValue)
-      if CurrentValue then
-         -- Start the loop
-         _G.loop6 = true
-         while _G.loop6 do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer("Dragon9","Chaos")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-task.wait(0.1) 
-         end
-      else
-         _G.loop6 = false
-      end
-print(CurrentValue)
-end)
-local tgls = serv:Channel("Boss Stage")
-tgls:Toggle("Vortex",false, function(CurrentValue)
-      if CurrentValue then
+	  		print("Toggle state:", chaos)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Vortex", 
+    default = false, 
+    callback = function(vortex)
+      if vortex then
          -- Start the loop
          _G.loop7 = true
          while _G.loop7 do
@@ -212,121 +224,70 @@ task.wait(0.1)
       else
          _G.loop7 = false
       end
-print(CurrentValue)
-end)
-local serv = win:Server("Event Battle", "")
-local tgls = serv:Channel("Event Boss")
-tgls:Toggle("Magma dragon",false, function(CurrentValue)
-      if CurrentValue then
-         -- Start the loop
-         _G.loop8 = true
-         while _G.loop8 do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Dragon-151","Normal")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-task.wait() 
-         end
-      else
-         _G.loop8 = false
-      end
-print(CurrentValue)
-end)
-tgls:Toggle("Dark Prince",false, function(CurrentValue)
-      if CurrentValue then
-         -- Start the loop
-         _G.loop9 = true
-         while _G.loop9 do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-150")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-task.wait(5) 
-         end
-      else
-         _G.loop9 = false
-      end
-print(CurrentValue)
-end)
-tgls:Toggle("Demon Lord",false, function(CurrentValue)
-      if CurrentValue then
-         -- Start the loop
-         _G.loop0 = true
-         while _G.loop0 do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer("Boss-151")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-task.wait(5) 
-         end
-      else
-         _G.loop0 = false
-      end
-print(CurrentValue)
-end)	
-local btns = serv:Channel("Other")
-btns:Seperator()
-btns:Button("Anti AFK", function()
-local VirtualUser = game:GetService('VirtualUser')
-game:GetService('Players').LocalPlayer.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
-end)
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Anti AFK loaded!",
-    Text = "Made by Tuuguu936",
-    Button1 = "Okay",
-    Duration = 5
-})end)
-local tgls = serv:Channel("Event") 
-tgls:Toggle("Auto Swing",false, function(swingevent)
+	  		print("Toggle state:", vortex)
+   end
+})
+local main = GUI:CreateTab("Event", "tree-palm") -- You can use IconID we didnt impleemnt lucid or any external icons
+GUI:CreateSection({
+    parent = main, 
+    text = "Summary "
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Swing Event", 
+    default = false, 
+    callback = function(swingevent)
       if swingevent then
          -- Start the loop
-         _G.loop1 = true
-			while _G.loop1 do
+         _G.loop11 = true
+			while _G.loop11 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
 task.wait() -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
-         _G.loop1 = false
+         _G.loop11 = false
       end
-		print(swingevent)
-	end)
-tgls:Toggle("Dungeon Chaos",false, function(Chaos)
-      if Chaos then
+	  		print("Toggle state:", swingevent)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Dungeon Event", 
+    default = false, 
+    callback = function(Dungeon)
+      if Dungeon then
          -- Start the loop
-         _G.Chaos1 = true
-	while _G.Chaos1 do
+         _G.Dungeon1 = true
+	while _G.Dungeon1 do
 task.wait(1)
 local args = {"Chaos"}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
 end
       else
          -- Stop the loop
-         _G.Chaos1 = false
+         _G.Dungeon1 = false
       end
-		print(Chaos)
-	end)
-tgls:Toggle("Leave Dungeon Chaos",false, function(Leave)
-      if Leave then
+	  		print("Toggle state:", Dungeon)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Leave Dungeon", 
+    default = false, 
+    callback = function(leave)
+      if leave then
          -- Start the loop
-         _G.Leave1 = true
-			while _G.Leave1 do
+         _G.leave1 = true
+			while _G.leave1 do
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnLeaveDungeon"):FireServer()
 				wait(25) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
-         _G.Leave1 = false
+         _G.leave1 = false
       end
-		print(Leave)
-	end)	
-tgls:Toggle("Fly",false, function()
-game:GetService("Players").LocalPlayer.Character.Humanoid.HipHeight = 12				
--- Adjust the wait time as needed
-end)
-
-tgls:Toggle("UnFly",false, function()
-game:GetService("Players").LocalPlayer.Character.Humanoid.HipHeight = 1				
--- Adjust the wait time as needed
-
-end)
+	  		print("Toggle state:", leave)
+   end
+})
