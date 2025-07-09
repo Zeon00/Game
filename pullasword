@@ -121,26 +121,36 @@ GUI:CreateToggle({
    end
 })
 
-GUI:CreateToggle({
+local main = GUI:CreateTab("Misc", "circle-ellipsis") -- You can use IconID we didnt impleemnt lucid or any external icons
+GUI:CreateSection({
     parent = main, 
-    text = "Auto Spin Online", 
-    default = false, 
-    callback = function(rebirth)
-      if rebirth then
-         -- Start the loop
-         _G.looprebirth = true
-			while _G.looprebirth do
-				game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("RebirthEvent"):FireServer()
-                game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SuperRebirthEvent"):FireServer()
-				task.wait() -- Adjust the wait time as needed
-			end
-      else
-         -- Stop the loop
-         _G.looprebirth = false
-      end
-	  		print("Toggle state:", rebirth)
-   end
+    text = "Option"
 })
+
+GUI:CreateButton({
+    parent = main, 
+    text = "Auto CLick", 
+    callback = function()
+getgenv().key = "Hostile"
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Hosvile/The-telligence/main/MC%20KSystem%202"))()
+end})
+
+GUI:CreateButton({
+    parent = main, 
+    text = "Anti AFK", 
+    callback = function()
+local VirtualUser = game:GetService('VirtualUser')
+game:GetService('Players').LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Anti AFK loaded!",
+    Text = "Made by Tuuguu936",
+    Button1 = "Okay",
+    Duration = 5
+})
+end})
 
 local main = GUI:CreateTab("World Boss", "sun") -- You can use IconID we didnt impleemnt lucid or any external icons
 GUI:CreateSection({
