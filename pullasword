@@ -31,6 +31,46 @@ GUI:CreateSection({
 })
 GUI:CreateToggle({
     parent = main, 
+    text = "Auto Claim Online", 
+    default = false, 
+    callback = function(claim)
+	if claim then	
+	_G.claim1 = true
+	while _G.claim1 == true do
+local args = {"Reward1"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward2"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward3"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward4"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward5"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward6"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward7"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward8"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward9"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward10"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward11"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+local args = {"Reward12"}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("ClaimGift"):FireServer(unpack(args))
+task.wait(200)
+end
+		else
+		_G.claim1 = false
+           end
+        print("Toggle state:", claim)
+    end
+})
+GUI:CreateToggle({
+    parent = main, 
     text = "Auto Swing Toogle", 
     default = false, 
     callback = function(swing)
