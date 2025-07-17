@@ -354,12 +354,7 @@ local args = {
 	"Accepted"
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("SquidGame"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
-task.wait(0.5)
-local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrame
-task.wait(0.5)
-local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrame
+
 end
 else
 _G.msp201 = false
@@ -367,21 +362,39 @@ _G.msp201 = false
 print("Toggle state:", msp20)
     end
 })
-GUI:CreateButton({
+GUI:CreateToggle({
     parent = main, 
-    text = "Win Green Light", 
-    callback = function()
-local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+    text = "Auto Green Light", 
+    default = false, 
+    callback = function(Divine)
+if Divine then
+        _G.Divine1 = true
+	while _G.Divine1 == true do
+		task.wait(2)
+   	local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
 rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrame
-end
+       end
+		else
+		_G.Divine1 = false
+           end
+        print("Toggle state:", Divine)
+    end
 })
-
-
-GUI:CreateButton({
+GUI:CreateToggle({
     parent = main, 
-    text = "Win Glass", 
-    callback = function()
+    text = "Auto Glass", 
+    default = false, 
+    callback = function(merdeka)
+if merdeka then
+        _G.merdeka1 = true
+	while _G.merdeka1 == true do
+		task.wait(2)
 local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
 rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrame
 end
+		else
+		_G.merdeka1 = false
+           end
+        print("Toggle state:", merdeka)
+    end
 })
