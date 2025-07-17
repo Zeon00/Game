@@ -366,7 +366,8 @@ GUI:CreateButton({
     text = "Win Green Light", 
     callback = function()
 local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrameend
+rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrame
+end
 })
 
 
@@ -375,5 +376,6 @@ GUI:CreateButton({
     text = "Win Glass", 
     callback = function()
 local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrameend
+rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrame
+end
 })
