@@ -349,7 +349,7 @@ GUI:CreateToggle({
 if msp20 then
         _G.msp201 = true
 			while _G.msp201 == true do
-task.wait(0.1)
+task.wait(10.1)
 local args = {
 	"Accepted"
 }
@@ -362,39 +362,20 @@ _G.msp201 = false
 print("Toggle state:", msp20)
     end
 })
-GUI:CreateToggle({
+GUI:CreateButton({
     parent = main, 
-    text = "Auto Green Light", 
-    default = false, 
-    callback = function(Divine)
-if Divine then
-        _G.Divine1 = true
-	while _G.Divine1 == true do
-		task.wait(2)
-   	local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrame
-       end
-		else
-		_G.Divine1 = false
-           end
-        print("Toggle state:", Divine)
-    end
-})
-GUI:CreateToggle({
-    parent = main, 
-    text = "Auto Glass", 
-    default = false, 
-    callback = function(merdeka)
-if merdeka then
-        _G.merdeka1 = true
-	while _G.merdeka1 == true do
-		task.wait(2)
+    text = "Win Green Light", 
+    callback = function()
 local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrame
+rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrame
 end
-		else
-		_G.merdeka1 = false
-           end
-        print("Toggle state:", merdeka)
-    end
+})
+
+
+GUI:CreateButton({
+    parent = main, 
+    text = "Win Glass", 
+    callback = function()
+local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrameend
 })
