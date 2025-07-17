@@ -354,7 +354,7 @@ local args = {
 	"Accepted"
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("SquidGame"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
-
+task.wait(10)
 end
 else
 _G.msp201 = false
