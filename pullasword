@@ -349,18 +349,17 @@ GUI:CreateToggle({
 if msp20 then
         _G.msp201 = true
 			while _G.msp201 == true do
-
+task.wait(0.1)
 local args = {
 	"Accepted"
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("SquidGame"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
-task.wait(10)
+task.wait(0.5)
 local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
 rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrame
-task.wait(5)
+task.wait(0.5)
 local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
 rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrame
-task.wait(5)
 end
 else
 _G.msp201 = false
