@@ -291,6 +291,11 @@ GUI:CreateToggle({
          -- Start the loop
          _G.loop11 = true
 			while _G.loop11 do
+local args = {
+	game:GetService("ReplicatedStorage"):WaitForChild("Items"):WaitForChild("Pencil"):WaitForChild("120"),
+	false
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickChangeEvent"):FireServer(unpack(args))
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
 task.wait() -- Adjust the wait time as needed
@@ -304,16 +309,20 @@ task.wait() -- Adjust the wait time as needed
 })
 GUI:CreateToggle({
     parent = main, 
-    text = "Auto Dungeon Event", 
+    text = "Auto Dungeon 10", 
     default = false, 
     callback = function(Dungeon)
       if Dungeon then
          -- Start the loop
          _G.Dungeon1 = true
 	while _G.Dungeon1 do
-task.wait(1)
-local args = {"Chaos"}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
+task.wait(100)
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"45"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 end
       else
          -- Stop the loop
