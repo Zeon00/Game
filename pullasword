@@ -122,6 +122,7 @@ if potion then
          -- Start the loop
          _G.looppotion = true
 			while _G.looppotion do
+				
 				local args = {"Buy",2,1}
                 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
                 local args = {"Buy",2,2}
@@ -130,7 +131,7 @@ if potion then
                 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
                 local args = {"Buy",2,4}
                 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("OnStandartShopRequest"):FireServer(unpack(args))
-				task.wait() -- Adjust the wait time as needed
+				task.wait(100)
 			end
       else
          -- Stop the loop
@@ -151,7 +152,7 @@ GUI:CreateToggle({
 			while _G.loopspin do 
 				game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteEvent"):WaitForChild("SpaceEggEvent"):FireServer()
 	            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("GetCreditsEvent"):FireServer()
-				task.wait() -- Adjust the wait time as needed
+				task.wait(150) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
@@ -166,7 +167,27 @@ GUI:CreateSection({
     parent = main, 
     text = "Option"
 })
-
+GUI:CreateButton({
+    parent = main, 
+    text = "Auto Claim Quest Daily", 
+    callback = function()
+local args = {"Daily","Win20MillionPower"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+local args = {"Daily","BuyItemsAtStore"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+local args = {"Daily","Defeat10Enemies"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+local args = {"Daily","Click1000Times"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+local args = {"Daily","GoTo5Worlds"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+local args = {"Daily","Pull10Swords"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+local args = {"Daily","UseOnSideSystem"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+local args = {"Daily","Complete10Quests"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClaimQuest"):FireServer(unpack(args))
+end})
 GUI:CreateButton({
     parent = main, 
     text = "Auto CLick", 
@@ -309,7 +330,7 @@ task.wait() -- Adjust the wait time as needed
 })
 GUI:CreateToggle({
     parent = main, 
-    text = "Auto Dungeon 10", 
+    text = "Auto Dungeon Underworld", 
     default = false, 
     callback = function(Dungeon)
       if Dungeon then
@@ -357,43 +378,4 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
       end
 	  		print("Toggle state:", leave)
    end
-})
-GUI:CreateToggle({
-    parent = main, 
-    text = "Auto Accept", 
-    default = false, 
-    callback = function(msp20)
-if msp20 then
-        _G.msp201 = true
-			while _G.msp201 == true do
-task.wait(10.1)
-local args = {
-	"Accepted"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("SquidGame"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
-task.wait(10)
-end
-else
-_G.msp201 = false
- end
-print("Toggle state:", msp20)
-    end
-})
-GUI:CreateButton({
-    parent = main, 
-    text = "Win Green Light", 
-    callback = function()
-local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GreenLight.WinHitbox.CFrame
-end
-})
-
-
-GUI:CreateButton({
-    parent = main, 
-    text = "Win Glass", 
-    callback = function()
-local rootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
-rootPart.CFrame = workspace.MiniGameFolder.GlassBridge.End.WinHitbox.CFrame
-end
 })
