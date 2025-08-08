@@ -305,6 +305,26 @@ GUI:CreateSection({
 })
 GUI:CreateToggle({
     parent = main, 
+    text = "Auto Swing", 
+    default = false, 
+    callback = function(swing1)
+      if swing1 then
+         -- Start the loop
+         _G.loop111 = true
+			while _G.loop111 == true do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
+task.wait() -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.loop111 = false
+      end
+	  		print("Toggle state:", swing1)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
     text = "Auto Swing Event", 
     default = false, 
     callback = function(swingevent)
