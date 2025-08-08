@@ -298,6 +298,77 @@ task.wait(0.1)
 	  		print("Toggle state:", vortex)
    end
 })
+GUI:CreateToggle({
+    parent = main, 
+    text = "Mega Boss All", 
+    default = false, 
+    callback = function(mega)
+      if mega then
+         _G.mega1 = true
+         while _G.mega1 == true do
+task.wait()		 
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon-3","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait()
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon-5","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait()
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon3","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait()
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon4","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait()
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon5","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait()
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon8","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait()
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon9","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait()
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Dragon10","Chaos"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+end
+      else
+         _G.mega1 = false
+      end
+	  		print("Toggle state:", mega)
+   end
+})
 local main = GUI:CreateTab("Event", "tree-palm") -- You can use IconID we didnt impleemnt lucid or any external icons
 GUI:CreateSection({
     parent = main, 
