@@ -1,0 +1,310 @@
+-- 🌟 UNIVERSAL AUTO SYSTEM GUI (DRAGGABLE + MINIMIZE + AUTO WINEVENT)
+task.wait(1)
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Events = Remotes:WaitForChild("Events")
+local TowerRemotes = ReplicatedStorage:WaitForChild("TowerEventRemotes")
+local WinBossEvent = ReplicatedStorage:WaitForChild("EventFolder"):WaitForChild("WinBossEvent")
+local WinEvent = ReplicatedStorage:WaitForChild("EventFolder"):WaitForChild("WinEvent")
+local ClickEvent = Events:WaitForChild("ClickEvent")
+
+-- 🌈 GUI utama
+local screenGui = Instance.new("ScreenGui", playerGui)
+screenGui.Name = "UniversalAutoGUI"
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 280, 0, 620)
+frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+-- 🖱️ draggable
+local dragging, dragInput, dragStart, startPos
+local UIS = game:GetService("UserInputService")
+
+local function updateInput(input)
+	local delta = input.Position - dragStart
+	frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+frame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		updateInput(input)
+	end
+end)
+
+-- 🌟 header
+local header = Instance.new("Frame", frame)
+header.Size = UDim2.new(1, 0, 0, 40)
+header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.new(1, -70, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.Text = "🌟 UNIVERSAL AUTO SYSTEM"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(120, 255, 120)
+title.BackgroundTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ❌ Close
+local closeBtn = Instance.new("TextButton", header)
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0.5, -15)
+closeBtn.Text = "X"
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
+
+-- 🔽 Minimize
+local minimizeBtn = Instance.new("TextButton", header)
+minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+minimizeBtn.Position = UDim2.new(1, -70, 0.5, -15)
+minimizeBtn.Text = "-"
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 255, 60)
+minimizeBtn.TextColor3 = Color3.new(0, 0, 0)
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 22
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 8)
+
+-- konten
+local content = Instance.new("Frame", frame)
+content.Size = UDim2.new(1, 0, 1, -45)
+content.Position = UDim2.new(0, 0, 0, 45)
+content.BackgroundTransparency = 1
+
+-- fungsi minimize
+local minimized = false
+minimizeBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	if minimized then
+		content.Visible = false
+		frame.Size = UDim2.new(0, 280, 0, 40)
+		minimizeBtn.Text = "+"
+	else
+		content.Visible = true
+		frame.Size = UDim2.new(0, 280, 0, 620)
+		minimizeBtn.Text = "-"
+	end
+end)
+
+-- tombol close
+closeBtn.MouseButton1Click:Connect(function()
+	screenGui:Destroy()
+	for k, _ in pairs(_G) do
+		if k:find("Auto") then _G[k] = false end
+	end
+end)
+
+-- 🔘 fungsi toggle dengan defaultOn
+local function createToggle(name, yOffset, loopFunc, defaultOn)
+	local btn = Instance.new("TextButton", content)
+	btn.Size = UDim2.new(0, 240, 0, 45)
+	btn.Position = UDim2.new(0.5, -120, 0, yOffset)
+	btn.Text = name .. ": OFF"
+	btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 18
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+	local status = Instance.new("TextLabel", content)
+	status.Size = UDim2.new(1, 0, 0, 20)
+	status.Position = UDim2.new(0, 0, 0, yOffset + 45)
+	status.Text = "Status: Idle"
+	status.TextColor3 = Color3.new(1, 1, 1)
+	status.Font = Enum.Font.SourceSans
+	status.TextSize = 16
+	status.BackgroundTransparency = 1
+
+	local key = "Auto" .. name:gsub(" ", "")
+	_G[key] = false
+
+	btn.MouseButton1Click:Connect(function()
+		_G[key] = not _G[key]
+		if _G[key] then
+			btn.Text = name .. ": ON"
+			btn.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+			task.spawn(function() loopFunc(_G, key, status) end)
+		else
+			btn.Text = name .. ": OFF"
+			btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+			status.Text = "Status: Stopped"
+		end
+	end)
+
+	-- otomatis ON jika defaultOn true
+	if defaultOn then
+		_G[key] = true
+		btn.Text = name .. ": ON"
+		btn.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+		task.spawn(function() loopFunc(_G, key, status) end)
+	end
+end
+
+-- ⚡ AUTO CLICK
+createToggle("Auto Click", 10, function(G, key, status)
+	while G[key] do
+		pcall(function()
+			ClickEvent:FireServer()
+			status.Text = "Status: Clicking..."
+		end)
+		task.wait()
+	end
+end, true)
+
+-- 💀 AUTO BOSS
+createToggle("Auto Boss", 80, function(G, key, status)
+	while G[key] do
+		pcall(function()
+			Events:WaitForChild("RemoveC"):FireServer(1)
+			WinBossEvent:FireServer("4")
+			Events:WaitForChild("RemoveC"):FireServer(0)
+			status.Text = "Status: Boss cleared"
+		end)
+		task.wait()
+	end
+end, true)
+
+-- 🏰 AUTO TOWER -20
+createToggle("Tower -20", 150, function(G, key, status)
+	while G[key] do
+		pcall(function()
+			status.Text = "Status: Tower -20..."
+			Events:WaitForChild("RemoveC"):FireServer(1)
+			TowerRemotes:WaitForChild("TowerRewardsEvent"):FireServer("-20", false)
+			task.wait(0.2)
+			for i = 1, 10 do
+				if not G[key] then break end
+				TowerRemotes:WaitForChild("TowerRewardsEvent"):FireServer("-20", true)
+				status.Text = "Reward " .. i .. "/10"
+				task.wait(0.1)
+			end
+			Events:WaitForChild("PortalC"):FireServer(-150, player.Character, false)
+			task.wait(0.3)
+			Events:WaitForChild("RemoveC"):FireServer(0)
+			status.Text = "Status: Tower -20 done"
+			task.wait(1)
+		end)
+	end
+end, true)
+
+-- 🏯 AUTO TOWER -21
+createToggle("Tower -21", 220, function(G, key, status)
+	while G[key] do
+		pcall(function()
+			status.Text = "Status: Tower -21..."
+			Events:WaitForChild("RemoveC"):FireServer(1)
+			TowerRemotes:WaitForChild("TowerRewardsEvent"):FireServer("-21", false)
+			task.wait(0.2)
+			for i = 1, 10 do
+				if not G[key] then break end
+				TowerRemotes:WaitForChild("TowerRewardsEvent"):FireServer("-21", true)
+				status.Text = "Reward " .. i .. "/10"
+				task.wait(0.1)
+			end
+			Events:WaitForChild("PortalC"):FireServer(-150, player.Character, false)
+			task.wait(0.3)
+			Events:WaitForChild("RemoveC"):FireServer(0)
+			status.Text = "Status: Tower -21 done"
+			task.wait(1)
+		end)
+	end
+end, true)
+
+-- 🏯 AUTO TOWER -22
+createToggle("Tower -22", 290, function(G, key, status)
+	while G[key] do
+		pcall(function()
+			status.Text = "Status: Tower -22..."
+			Events:WaitForChild("RemoveC"):FireServer(1)
+			TowerRemotes:WaitForChild("TowerRewardsEvent"):FireServer("-22", false)
+			task.wait(0.2)
+			for i = 1, 10 do
+				if not G[key] then break end
+				TowerRemotes:WaitForChild("TowerRewardsEvent"):FireServer("-22", true)
+				status.Text = "Reward " .. i .. "/10"
+				task.wait(0.1)
+			end
+			Events:WaitForChild("PortalC"):FireServer(-150, player.Character, false)
+			task.wait(0.3)
+			Events:WaitForChild("RemoveC"):FireServer(0)
+			status.Text = "Status: Tower -22 done"
+			task.wait(1)
+		end)
+	end
+end, true)
+
+-- 🏆 AUTO WIN EVENT (bergantian 0.25s)
+createToggle("WinEvent", 360, function(G, key, status)
+	local winIDs = {"1650", "1651", "1652", "1653"}
+	local index = 1
+	while G[key] do
+		pcall(function()
+			status.Text = "Status: Claiming ID " .. winIDs[index] .. "..."
+			Events:WaitForChild("RemoveC"):FireServer(1)
+			WinEvent:FireServer(winIDs[index])
+			Events:WaitForChild("RemoveC"):FireServer(0)
+
+			index = index + 1
+			if index > #winIDs then
+				index = 1
+			end
+			status.Text = "Status: WinEvent ID " .. winIDs[index-1] .. " done"
+		end)
+		task.wait(1)
+	end
+end, true)
+
+-- 🎄 AUTO BUY XMAS INGREDIENT (ID 6)
+createToggle("Buy Mec", 430, function(G, key, status)
+	while G[key] do
+		pcall(function()
+			status.Text = "Status: Buying Mec..."
+			Events:WaitForChild("BuyIngredientForXmas"):FireServer(6)
+			status.Text = "Status: Bought Ingredient (6)"
+		end)
+		task.wait(1)
+	end
+end, false)
+
+-- 🎄 AUTO BUY XMAS INGREDIENT (ID 7)
+createToggle("Buy Kiwitto", 500, function(G, key, status)
+	while G[key] do
+		pcall(function()
+			status.Text = "Status: Buying Kiwitto..."
+			Events:WaitForChild("BuyIngredientForXmas"):FireServer(7)
+			status.Text = "Status: Bought Ingredient (7)"
+		end)
+		task.wait(1)
+	end
+end, false)
