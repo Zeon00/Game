@@ -297,13 +297,13 @@ createToggle("Buy Mec", 430, function(G, key, status)
 	end
 end, false)
 
--- 🎄 AUTO BUY XMAS INGREDIENT (ID 7)
-createToggle("Buy Kiwitto", 500, function(G, key, status)
-	while G[key] do
+-- 🎄 AUTO BUY XMAS INGREDIENT (ID 12)
+createToggle("Buy Potion X10", 500, function(G, key, status)
+	while G[key] do 
 		pcall(function()
-			status.Text = "Status: Buying Kiwitto..."
-			Events:WaitForChild("BuyIngredientForXmas"):FireServer(7)
-			status.Text = "Status: Bought Ingredient (7)"
+			status.Text = "Status: Buying Potion..."
+			Events:WaitForChild("BuyIngredientForXmas"):FireServer(12)
+			status.Text = "Status: Bought Ingredient (12)"
 		end)
 		task.wait(1)
 	end
