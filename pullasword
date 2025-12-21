@@ -274,26 +274,27 @@ task.wait()
 })
 
 GUI:CreateToggle({
-    parent = main, 
-    text = "Chaos", 
-    default = false, 
+    parent = main,
+    text = "Chaos",
+    default = false,
     callback = function(chaos)
-      if Chaos then
-         _G.Chaos1 = true
-         while _G.Chaos1 == true do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-local args = {"Dragon-5","Chaos"}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
-local args = {0}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-task.wait(0.05) 
-         end
-      else
-         _G.Chaos1 = false
-      end
-	  		print("Toggle state:", chaos)
-   end
+        _G.Chaos1 = chaos
+        if not chaos then return end
+
+        task.spawn(function()
+            local Events = game:GetService("ReplicatedStorage")
+                .Remotes.Events
+
+            while _G.Chaos1 do
+                Events.RemoveC:FireServer(1)
+                Events.WinMegaBossEvent:FireServer("Dragon-5","Chaos")
+                Events.RemoveC:FireServer(0)
+                task.wait(0.05)
+            end
+        end)
+    end
 })
+
 GUI:CreateToggle({
     parent = main, 
     text = "Vortex", 
@@ -315,37 +316,39 @@ task.wait(0.1)
    end
 })
 GUI:CreateToggle({
-    parent = main, 
-    text = "Mega Boss All", 
-    default = false, 
+    parent = main,
+    text = "Mega Boss All",
+    default = false,
     callback = function(mega)
-      if mega then
-         _G.mega1 = true
+        _G.mega1 = mega
 
-local RS = game:GetService("ReplicatedStorage")
-local Events = RS:WaitForChild("Remotes"):WaitForChild("Events")
+        if not mega then return end
 
-local mobs = {
+        task.spawn(function()
+            local RS = game:GetService("ReplicatedStorage")
+            local Events = RS.Remotes.Events
 
-    "Dragon8",
-    "Dragon-5",
-    "Dragon9",
-}
+            local mobs = {
+                "Dragon8",
+                "Dragon-5",
+                "Dragon9",
+            }
 
-while _G.mega1 do
-    for _, mob in ipairs(mobs) do
-        Events.RemoveC:FireServer(1)
-        Events.WinMegaBossEvent:FireServer(mob, "Chaos")
-        Events.RemoveC:FireServer(0)
-        task.wait(0.03) -- WAJIB
+            while _G.mega1 do
+                Events.RemoveC:FireServer(1) -- ON SEKALI
+
+                for _, mob in ipairs(mobs) do
+                    Events.WinMegaBossEvent:FireServer(mob, "Chaos")
+                    task.wait(0.05) -- micro delay aman
+                end
+
+                Events.RemoveC:FireServer(0)
+                task.wait(0.1)
+            end
+        end)
     end
-end
-      else
-         _G.mega1 = false
-      end
-	  		print("Toggle state:", mega)
-   end
 })
+
 local main = GUI:CreateTab("Event", "tree-palm") -- You can use IconID we didnt impleemnt lucid or any external icons
 GUI:CreateSection({
     parent = main, 
