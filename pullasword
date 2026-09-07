@@ -362,7 +362,7 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 local args = {
-	"1731"
+	"1732"
 }
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
 local args = {
