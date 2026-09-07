@@ -447,6 +447,29 @@ task.wait(15)
 	  		print("Toggle state:", hard)
    end
 })
+GUI:CreateToggle({
+    parent = main, 
+    text = "Event5", 
+    default = false, 
+    callback = function(hard)
+if hard then
+         -- Start the loop
+         _G.loop24 = true
+         while _G.loop24 == true do
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"1731"}
+game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait(15) 
+         end
+      else
+         _G.loop24 = false
+      end
+	  		print("Toggle state:", hard)
+   end
+})
 local main = GUI:CreateTab("Event", "tree-palm") -- You can use IconID we didnt impleemnt lucid or any external icons
 GUI:CreateSection({
     parent = main, 
