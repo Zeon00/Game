@@ -370,7 +370,7 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 
-task.wait(100) 
+task.wait(35) 
          end
       else
          _G.loop2 = false
