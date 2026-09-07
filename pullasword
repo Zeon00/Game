@@ -370,7 +370,7 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 
-task.wait(35) 
+task.wait(15) 
          end
       else
          _G.loop20 = false
@@ -393,7 +393,7 @@ local args = {"FixedBoss-2"}
 game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
 local args = {0}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-task.wait(30) 
+task.wait(15) 
          end
       else
          _G.loop21 = false
