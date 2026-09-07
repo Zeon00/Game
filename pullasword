@@ -355,8 +355,8 @@ GUI:CreateToggle({
     callback = function(hard)
 if hard then
          -- Start the loop
-         _G.loop2 = true
-         while _G.loop2 == true do
+         _G.loop20 = true
+         while _G.loop20 == true do
 local args = {
 	1
 }
@@ -373,7 +373,30 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
 task.wait(35) 
          end
       else
-         _G.loop2 = false
+         _G.loop20 = false
+      end
+	  		print("Toggle state:", hard)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Event2", 
+    default = false, 
+    callback = function(hard)
+if hard then
+         -- Start the loop
+         _G.loop21 = true
+         while _G.loop21 == true do
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"FixedBoss-2"}
+game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait() 
+         end
+      else
+         _G.loop21 = false
       end
 	  		print("Toggle state:", hard)
    end
