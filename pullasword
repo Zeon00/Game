@@ -401,6 +401,52 @@ task.wait(15)
 	  		print("Toggle state:", hard)
    end
 })
+GUI:CreateToggle({
+    parent = main, 
+    text = "Event3", 
+    default = false, 
+    callback = function(hard)
+if hard then
+         -- Start the loop
+         _G.loop22 = true
+         while _G.loop22 == true do
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"FixedBoss-3"}
+game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait(15) 
+         end
+      else
+         _G.loop22 = false
+      end
+	  		print("Toggle state:", hard)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Event4", 
+    default = false, 
+    callback = function(hard)
+if hard then
+         -- Start the loop
+         _G.loop23 = true
+         while _G.loop23 == true do
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"FixedBoss-4"}
+game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait(15) 
+         end
+      else
+         _G.loop23 = false
+      end
+	  		print("Toggle state:", hard)
+   end
+})
 local main = GUI:CreateTab("Event", "tree-palm") -- You can use IconID we didnt impleemnt lucid or any external icons
 GUI:CreateSection({
     parent = main, 
