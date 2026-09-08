@@ -714,3 +714,97 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
 	  		print("Toggle state:", leave)
    end
 })
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Tower", 
+    default = false, 
+    callback = function(leave)
+      if leave then
+         -- Start the loop
+         _G.tower1 = true
+			while _G.tower1 == true do
+local args = {
+	1
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {
+	"-20",
+	false
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+local args = {
+	"-20",
+	true
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TowerEventRemotes"):WaitForChild("TowerRewardsEvent"):FireServer(unpack(args))
+
+local args = {
+	-150,
+	game:GetService("Players").LocalPlayer.Character,
+	false
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("PortalC"):FireServer(unpack(args))
+local args = {
+	0
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+
+				wait(5) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.tower1 = false
+      end
+	  		print("Toggle state:", leave)
+   end
+})
