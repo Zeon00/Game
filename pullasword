@@ -473,6 +473,118 @@ task.wait(25)
 })
 
 _G.EventLoop = false
+_G.EventRunning = false
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local RemoveC = ReplicatedStorage
+    :WaitForChild("Remotes")
+    :WaitForChild("Events")
+    :WaitForChild("RemoveC")
+
+local EventFolder = ReplicatedStorage
+    :WaitForChild("EventFolder")
+
+
+local Events = {
+    {
+        type = "WinEvent",
+        value = "1732"
+    },
+
+    {
+        type = "WinBossEvent",
+        value = "FixedBoss-2"
+    },
+
+    {
+        type = "WinBossEvent",
+        value = "FixedBoss-3"
+    },
+
+    {
+        type = "WinBossEvent",
+        value = "FixedBoss-4"
+    },
+
+    {
+        type = "WinEvent",
+        value = "1731"
+    },
+
+    {
+        type = "WinBossEvent",
+        value = "FixedBoss-1"
+    }
+}
+
+
+local function StartEventLoop()
+
+    -- Jangan bikin loop kedua
+    if _G.EventRunning then
+        return
+    end
+
+    _G.EventRunning = true
+
+    task.spawn(function()
+
+        local index = 1
+
+        while _G.EventLoop do
+
+            local event = Events[index]
+
+            local success, err = pcall(function()
+
+                RemoveC:FireServer(1)
+
+                task.wait(0.2)
+
+                local Remote = EventFolder:WaitForChild(event.type)
+
+                Remote:FireServer(event.value)
+
+                task.wait(0.2)
+
+                RemoveC:FireServer(0)
+
+            end)
+
+            if not success then
+                warn("Event Error:", err)
+            end
+
+
+            -- Event berikutnya
+            index = index + 1
+
+            if index > #Events then
+                index = 1
+            end
+
+
+            -- Tunggu 35 detik
+            -- Bisa langsung berhenti kalau toggle OFF
+            for i = 1, 35 do
+
+                if not _G.EventLoop then
+                    break
+                end
+
+                task.wait(1)
+
+            end
+
+        end
+
+        _G.EventRunning = false
+
+    end)
+
+end
+
 
 GUI:CreateToggle({
     parent = main,
@@ -480,91 +592,25 @@ GUI:CreateToggle({
     default = false,
 
     callback = function(hard)
+
         _G.EventLoop = hard
 
         if hard then
-            task.spawn(function()
 
-                local Events = {
-                    -- Event
-                    {
-                        type = "WinEvent",
-                        value = "1732"
-                    },
+            print("Event Gantian: ON")
 
-                    -- Event2
-                    {
-                        type = "WinBossEvent",
-                        value = "FixedBoss-2"
-                    },
+            StartEventLoop()
 
-                    -- Event3
-                    {
-                        type = "WinBossEvent",
-                        value = "FixedBoss-3"
-                    },
+        else
 
-                    -- Event4
-                    {
-                        type = "WinBossEvent",
-                        value = "FixedBoss-4"
-                    },
+            print("Event Gantian: OFF")
 
-                    -- Event5
-                    {
-                        type = "WinEvent",
-                        value = "1731"
-                    },
-					 -- Event6
-                    {
-                        type = "WinBossEvent",
-                        value = "FixedBoss-1"
-                    }
-                }
-
-                local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-                local RemoveC = ReplicatedStorage
-                    :WaitForChild("Remotes")
-                    :WaitForChild("Events")
-                    :WaitForChild("RemoveC")
-
-                local EventFolder = ReplicatedStorage
-                    :WaitForChild("EventFolder")
-
-                local index = 1
-
-                while _G.EventLoop do
-
-                    local event = Events[index]
-
-                    -- masuk / remove
-                    RemoveC:FireServer(1)
-
-                    -- klaim monster/event
-                    EventFolder
-                        :WaitForChild(event.type)
-                        :FireServer(event.value)
-
-                    -- keluar / remove
-                    RemoveC:FireServer(0)
-
-                    -- pindah ke monster berikutnya
-                    index = index + 1
-
-                    if index > #Events then
-                        index = 1
-                    end
-
-                    -- cooldown sebelum monster berikutnya
-                    task.wait(35)
-                end
-            end)
         end
 
-        print("Event Gantian:", hard)
     end
 })
+
+
 
 
 local main = GUI:CreateTab("Event", "tree-palm") -- You can use IconID we didnt impleemnt lucid or any external icons
