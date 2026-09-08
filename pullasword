@@ -515,6 +515,11 @@ GUI:CreateToggle({
                         type = "WinEvent",
                         value = "1731"
                     }
+					 -- Event6
+                    {
+                        type = "WinBossEvent",
+                        value = "FixedBoss-1"
+                    }
                 }
 
                 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -552,7 +557,7 @@ GUI:CreateToggle({
                     end
 
                     -- cooldown sebelum monster berikutnya
-                    task.wait(15)
+                    task.wait(35)
                 end
             end)
         end
