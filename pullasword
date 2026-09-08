@@ -357,6 +357,7 @@ if hard then
          -- Start the loop
          _G.loop20 = true
          while _G.loop20 == true do
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
 local args = {
 	1
 }
