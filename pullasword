@@ -514,7 +514,7 @@ GUI:CreateToggle({
                     {
                         type = "WinEvent",
                         value = "1731"
-                    }
+                    },
 					 -- Event6
                     {
                         type = "WinBossEvent",
