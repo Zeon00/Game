@@ -436,94 +436,78 @@ GUI:CreateToggle({
     text = "Event4", 
     default = false, 
     callback = function(hard)
-if hard then
-         -- Start the loop
-         _G.loop23 = true
-         while _G.loop23 == true do
-local args = {1}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-local args = {"FixedBoss-1"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
-local args = {"FixedBoss-2"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
-local args = {"FixedBoss-3"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
-local args = {"FixedBoss-4"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
-local args = {0}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-task.wait(25) 
-         end
-      else
-         _G.loop23 = false
-      end
-	  		print("Toggle state:", hard)
-   end
+        if hard then
+            _G.loop23 = true
+
+            task.spawn(function()
+                while _G.loop23 do
+                    local args = {1}
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Events")
+                        :WaitForChild("RemoveC")
+                        :FireServer(unpack(args))
+
+                    local WinBossEvent = game:GetService("ReplicatedStorage")
+                        :WaitForChild("EventFolder")
+                        :WaitForChild("WinBossEvent")
+
+                    WinBossEvent:FireServer("FixedBoss-1")
+                    WinBossEvent:FireServer("FixedBoss-2")
+                    WinBossEvent:FireServer("FixedBoss-3")
+                    WinBossEvent:FireServer("FixedBoss-4")
+
+                    local args = {0}
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Events")
+                        :WaitForChild("RemoveC")
+                        :FireServer(unpack(args))
+
+                    task.wait(5)
+                end
+            end)
+        else
+            _G.loop23 = false
+        end
+    end
 })
+
+
 GUI:CreateToggle({
     parent = main, 
     text = "Event5", 
     default = false, 
     callback = function(hard)
-if hard then
-         -- Start the loop
-         _G.loop24 = true
-         while _G.loop24 == true do
-local args = {1}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-local args = {"1731"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {"1732"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {"1731"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {"1732"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {"1731"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {"1732"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {"1731"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {"1732"}
-game:GetService("ReplicatedStorage"):WaitForChild("EventFolder"):WaitForChild("WinEvent"):FireServer(unpack(args))
-local args = {0}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-task.wait(25) 
-         end
-      else
-         _G.loop24 = false
-      end
-	  		print("Toggle state:", hard)
-   end
-})
-
-GUI:CreateToggle({
-    parent = main,
-    text = "Event Gantian",
-    default = false,
-
-    callback = function(hard)
-
-        _G.EventLoop = hard
-
         if hard then
+            _G.loop24 = true
 
-            print("Event Gantian: ON")
+            task.spawn(function()
+                while _G.loop24 do
+                    local RemoveC = game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Events")
+                        :WaitForChild("RemoveC")
 
-            StartEventLoop()
+                    RemoveC:FireServer(1)
 
+                    local WinEvent = game:GetService("ReplicatedStorage")
+                        :WaitForChild("EventFolder")
+                        :WaitForChild("WinEvent")
+
+                    WinEvent:FireServer("1731")
+                    WinEvent:FireServer("1732")
+
+                    RemoveC:FireServer(0)
+
+                    task.wait(5)
+                end
+            end)
         else
-
-            print("Event Gantian: OFF")
-
+            _G.loop24 = false
         end
-
     end
 })
-
-
-
 
 local main = GUI:CreateTab("Event", "tree-palm") -- You can use IconID we didnt impleemnt lucid or any external icons
 GUI:CreateSection({
