@@ -648,11 +648,11 @@ GUI:CreateToggle({
          _G.loop11 = true
 			while _G.loop11 == true do
 local args = {
-	game:GetService("ReplicatedStorage"):WaitForChild("Items"):WaitForChild("Pencil"):WaitForChild("120"),
-	true
+	"Hard"
 }
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickChangeEvent"):FireServer(unpack(args))
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("ClickEvent"):FireServer()
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("MapReady"):FireServer()
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
 task.wait() -- Adjust the wait time as needed
 			end
