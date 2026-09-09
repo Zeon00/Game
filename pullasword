@@ -673,6 +673,31 @@ task.wait() -- Adjust the wait time as needed
 })
 GUI:CreateToggle({
     parent = main, 
+    text = "Auto Chaos Event", 
+    default = false, 
+    callback = function(swingevent)
+      if swingevent then
+         -- Start the loop
+         _G.loop25 = true
+			while _G.loop25 == true do
+local args = {
+	"Chaos"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("MapReady"):FireServer()
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
+task.wait() -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.loop25 = false
+      end
+	  		print("Toggle state:", swingevent)
+   end
+})
+GUI:CreateToggle({
+    parent = main, 
     text = "Auto Dungeon Underworld", 
     default = false, 
     callback = function(Dungeon)
