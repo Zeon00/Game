@@ -507,29 +507,98 @@ task.wait() -- Adjust the wait time as needed
    end
 })
 GUI:CreateToggle({
-    parent = main, 
-    text = "Auto Swing Event", 
-    default = false, 
+    parent = main,
+    text = "Auto Hard Event",
+    default = false,
     callback = function(swingevent)
-      if swingevent then
-         -- Start the loop
-         _G.loop11 = true
-			while _G.loop11 == true do
-local args = {
-	"Hard"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnJoinDungeon"):FireServer(unpack(args))
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("MapReady"):FireServer()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnDungeonClick"):FireServer()
-task.wait() -- Adjust the wait time as needed
-			end
-      else
-         -- Stop the loop
-         _G.loop11 = false
-      end
-	  		print("Toggle state:", swingevent)
-   end
+
+        _G.loop27 = swingevent
+
+        if swingevent then
+            task.spawn(function()
+                local RS = game:GetService("ReplicatedStorage")
+                local Events = RS:WaitForChild("Remotes")
+                    :WaitForChild("Events")
+
+                local Dungeon = Events:WaitForChild("Dungeon")
+
+                local OnJoinDungeon = Dungeon:WaitForChild("OnJoinDungeon")
+                local StartAutoFight = Events:WaitForChild("StartAutoFight")
+                local MapReady = Dungeon:WaitForChild("MapReady")
+                local OnDungeonClick = Dungeon:WaitForChild("OnDungeonClick")
+
+                -- Loop utama: 3 event setiap 10 detik
+                task.spawn(function()
+                    while _G.loop27 do
+                        OnJoinDungeon:FireServer("Hard")
+                        task.wait(5)
+
+                        StartAutoFight:FireServer()
+                        task.wait(5)
+
+                        MapReady:FireServer()
+
+                        task.wait(5)
+                    end
+                end)
+
+                -- OnDungeonClick secepat mungkin
+                while _G.loop27 do
+                    OnDungeonClick:FireServer()
+                    task.wait()
+                end
+            end)
+        end
+
+        print("Toggle state:", swingevent)
+    end
+})
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Normal Event",
+    default = false,
+    callback = function(swingevent)
+
+        _G.loop26 = swingevent
+
+        if swingevent then
+            task.spawn(function()
+                local RS = game:GetService("ReplicatedStorage")
+                local Events = RS:WaitForChild("Remotes")
+                    :WaitForChild("Events")
+
+                local Dungeon = Events:WaitForChild("Dungeon")
+
+                local OnJoinDungeon = Dungeon:WaitForChild("OnJoinDungeon")
+                local StartAutoFight = Events:WaitForChild("StartAutoFight")
+                local MapReady = Dungeon:WaitForChild("MapReady")
+                local OnDungeonClick = Dungeon:WaitForChild("OnDungeonClick")
+
+                -- Loop utama: 3 event setiap 10 detik
+                task.spawn(function()
+                    while _G.loop26 do
+                        OnJoinDungeon:FireServer("Normal")
+                        task.wait(5)
+
+                        StartAutoFight:FireServer()
+                        task.wait(5)
+
+                        MapReady:FireServer()
+
+                        task.wait(5)
+                    end
+                end)
+
+                -- OnDungeonClick secepat mungkin
+                while _G.loop26 do
+                    OnDungeonClick:FireServer()
+                    task.wait()
+                end
+            end)
+        end
+
+        print("Toggle state:", swingevent)
+    end
 })
 GUI:CreateToggle({
     parent = main,
@@ -556,14 +625,14 @@ GUI:CreateToggle({
                 task.spawn(function()
                     while _G.loop25 do
                         OnJoinDungeon:FireServer("Chaos")
-                        task.wait(10)
+                        task.wait(5)
 
                         StartAutoFight:FireServer()
-                        task.wait(10)
+                        task.wait(5)
 
                         MapReady:FireServer()
 
-                        task.wait(10)
+                        task.wait(5)
                     end
                 end)
 
@@ -576,6 +645,171 @@ GUI:CreateToggle({
         end
 
         print("Toggle state:", swingevent)
+    end
+})
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Fishing",
+    default = false,
+    callback = function(state)
+
+        _G.AutoFishing = state
+
+        if state then
+            task.spawn(function()
+                while _G.AutoFishing do
+
+                    -- 1. Cast Rod
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("CastRod")
+                        :InvokeServer()
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 2. Player Reaction
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("PlayerReaction")
+                        :FireServer()
+
+                    task.wait(5)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 3. UpdateBall
+                    local args = {
+                        25.16900062561035,
+                        vector.create(-918.0528564453125, 7.072099208831787, -266.9685363769531),
+                        false
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("UpdateBall")
+                        :FireServer(unpack(args))
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 4. UpdateBall
+                    local args = {
+                        25.40433692932129,
+                        vector.create(-918.0528564453125, 7.072099208831787, -266.9685363769531),
+                        false
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("UpdateBall")
+                        :FireServer(unpack(args))
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 5. UpdateBall
+                    local args = {
+                        14.789852142333984,
+                        vector.create(-915.0775146484375, 7.072099208831787, -256.2286682128906),
+                        false
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("UpdateBall")
+                        :FireServer(unpack(args))
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 6. UpdateBall
+                    local args = {
+                        10.79184627532959,
+                        vector.create(-913.689697265625, 7.072099208831787, -251.21902465820312),
+                        false
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("UpdateBall")
+                        :FireServer(unpack(args))
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 7. UpdateBall
+                    local args = {
+                        8.770051002502441,
+                        vector.create(-912.97607421875, 7.072099208831787, -248.64308166503906),
+                        false
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("UpdateBall")
+                        :FireServer(unpack(args))
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 8. UpdateBall
+                    local args = {
+                        9.002052307128906,
+                        vector.create(-912.97607421875, 7.072099208831787, -248.64308166503906),
+                        false
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("UpdateBall")
+                        :FireServer(unpack(args))
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 9. Prepare Fish
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("PrepareFishForReeling")
+                        :FireServer()
+
+                    task.wait(2)
+
+                    if not _G.AutoFishing then break end
+
+                    -- 10. Reel In
+                    local args = {
+                        2.5
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Fishing")
+                        :WaitForChild("ReelIn")
+                        :FireServer(unpack(args))
+
+                    -- mulai lagi dari CastRod
+                    task.wait(1)
+                end
+            end)
+        end
     end
 })
 GUI:CreateToggle({
