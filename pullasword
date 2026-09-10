@@ -304,10 +304,13 @@ GUI:CreateToggle({
          -- Start the loop
          _G.loop7 = true
          while _G.loop7 == true do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(1)
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinBossEvent"):FireServer("Boss10")
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(0)
-task.wait(0.1) 
+local args = {1}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {"Boss10"}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
+local args = {0}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+task.wait(30) 
          end
       else
          _G.loop7 = false
@@ -956,4 +959,35 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
       end
 	  		print("Toggle state:", leave)
    end
+})
+GUI:CreateToggle({
+    parent = main,
+    text = "Barrel Hit 1-50",
+    default = false,
+    callback = function(state)
+
+        _G.BarrelHit = state
+
+        if state then
+            task.spawn(function()
+                for i = 1, 50 do
+                    if not _G.BarrelHit then
+                        break
+                    end
+
+                    local args = {
+                        tostring(i)
+                    }
+
+                    game:GetService("ReplicatedStorage")
+                        :WaitForChild("Remotes")
+                        :WaitForChild("Events")
+                        :WaitForChild("BarrelHit")
+                        :FireServer(unpack(args))
+
+                    task.wait(30)
+                end
+            end)
+        end
+    end
 })
