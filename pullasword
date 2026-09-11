@@ -310,7 +310,8 @@ local args = {"Boss10"}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinBossEvent"):FireServer(unpack(args))
 local args = {0}
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-task.wait(30) 
+
+task.wait(0.01) 
          end
       else
          _G.loop7 = false
@@ -334,7 +335,11 @@ GUI:CreateToggle({
             local mobs = {
                 "Dragon8",
                 "Dragon-5",
+                "Dragon7",
+                "Dragon6",
+                "Dragon5",
                 "Dragon9",
+                "Dragon10",
             }
 
             while _G.mega1 do
@@ -849,15 +854,57 @@ end
 })
 GUI:CreateToggle({
     parent = main, 
-    text = "Auto Leave Dungeon", 
+    text = "Auto Hidden Dungeon", 
     default = false, 
     callback = function(leave)
       if leave then
          -- Start the loop
          _G.leave1 = true
 			while _G.leave1 == true do
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("Dungeon"):WaitForChild("OnLeaveDungeon"):FireServer()
-				wait(25) -- Adjust the wait time as needed
+local args = {
+	1
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {
+	"Dragon-1",
+	"Normal"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {
+	"Dragon-1",
+	"Hard"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {
+	"Dragon-1",
+	"Chaos"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+
+local args = {
+	0
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {
+	"Dragon-5",
+	"Normal"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {
+	"Dragon-5",
+	"Chaos"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {
+	"Dragon-5",
+	"Hard"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {
+	0
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+				task.wait(0.1) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
@@ -950,8 +997,7 @@ local args = {
 	0
 }
 game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-
-				wait(5) -- Adjust the wait time as needed
+				task.wait(5) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
@@ -990,4 +1036,28 @@ GUI:CreateToggle({
             end)
         end
     end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Hatch Egg", 
+    default = false, 
+    callback = function(leave)
+      if leave then
+         -- Start the loop
+         _G.Hatch1 = true
+			while _G.Hatch1 == true do
+local args = {
+	"W36E1",
+	"Buy1"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteFunction"):WaitForChild("BuyEgg"):InvokeServer(unpack(args))
+
+				task.wait(0.1) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.Hatch1 = false
+      end
+	  		print("Toggle state:", leave)
+   end
 })
