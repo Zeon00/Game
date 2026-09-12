@@ -1006,19 +1006,35 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
 	  		print("Toggle state:", leave)
    end
 })
+_G.BarrelHit = false
+_G.BarrelHitVersion = 0
+
 GUI:CreateToggle({
     parent = main,
     text = "Barrel Hit 1-50",
     default = false,
+
     callback = function(state)
 
         _G.BarrelHit = state
+        _G.BarrelHitVersion = _G.BarrelHitVersion + 1
 
-        if state then
-            task.spawn(function()
+        local version = _G.BarrelHitVersion
+
+        if not state then
+            return
+        end
+
+        task.spawn(function()
+
+            while _G.BarrelHit and _G.BarrelHitVersion == version do
+
+                -- Hit Barrel 1-50
                 for i = 1, 50 do
-                    if not _G.BarrelHit then
-                        break
+
+                    if not _G.BarrelHit
+                        or _G.BarrelHitVersion ~= version then
+                        return
                     end
 
                     local args = {
@@ -1030,13 +1046,15 @@ GUI:CreateToggle({
                         :WaitForChild("Events")
                         :WaitForChild("BarrelHit")
                         :FireServer(unpack(args))
-
-                    task.wait(30)
                 end
-            end)
-        end
+
+                -- Tunggu respawn 15 detik
+                task.wait(5)
+            end
+        end)
     end
 })
+
 GUI:CreateToggle({
     parent = main, 
     text = "Auto Hatch Egg", 
@@ -1060,4 +1078,86 @@ game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Ev
       end
 	  		print("Toggle state:", leave)
    end
+})
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Quiz",
+    default = false,
+
+    callback = function(state)
+        _G.AutoQuiz = state
+
+        if not state then
+            return
+        end
+
+        task.spawn(function()
+            while _G.AutoQuiz do
+
+                local Quiz = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Remotes")
+                    :WaitForChild("Functions")
+                    :WaitForChild("Quiz")
+
+                -- Start Quiz
+                local result = Quiz
+                    :WaitForChild("OnStartQuiz")
+                    :InvokeServer("Easy")
+
+                if not _G.AutoQuiz then
+                    break
+                end
+
+                -- Server memberikan pertanyaan pertama
+                if result and result.ok then
+
+                    local question = result
+
+                    while _G.AutoQuiz and question do
+
+                        -- Jumlah jawaban bisa 1-4
+                        local answerCount = #question.answers
+
+                        if answerCount > 0 then
+
+                            -- Random 1 sampai jumlah jawaban
+                            local randomAnswer = math.random(1, answerCount)
+
+                            local response = Quiz
+                                :WaitForChild("AnswerQuestion")
+                                :InvokeServer({
+                                    questionId = question.questionId,
+                                    answerIndex = randomAnswer
+                                })
+
+                            if response and response.ok then
+
+                                -- Masih ada pertanyaan berikutnya
+                                if not response.complete then
+                                    question = response
+                                else
+                                    -- Quiz selesai
+                                    question = nil
+                                end
+
+                            else
+                                -- Session/error
+                                question = nil
+                            end
+
+                        else
+                            question = nil
+                        end
+
+                        task.wait(0.1)
+                    end
+                end
+
+                -- Jeda sebelum mulai quiz berikutnya
+                if _G.AutoQuiz then
+                    task.wait(1)
+                end
+            end
+        end)
+    end
 })
