@@ -655,169 +655,176 @@ GUI:CreateToggle({
         print("Toggle state:", swingevent)
     end
 })
+_G.AutoFishing = false
+_G.AutoFishingVersion = 0
+
 GUI:CreateToggle({
     parent = main,
     text = "Auto Fishing",
     default = false,
+
     callback = function(state)
-
         _G.AutoFishing = state
+        _G.AutoFishingVersion = _G.AutoFishingVersion + 1
 
-        if state then
-            task.spawn(function()
-                while _G.AutoFishing do
+        local version = _G.AutoFishingVersion
 
-                    -- 1. Cast Rod
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
+        if not state then
+            return
+        end
+
+        task.spawn(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local Players = game:GetService("Players")
+
+            local Player = Players.LocalPlayer
+
+            local Fishing = ReplicatedStorage
+                :WaitForChild("Remotes")
+                :WaitForChild("Fishing")
+
+            local function active()
+                return _G.AutoFishing
+                    and _G.AutoFishingVersion == version
+            end
+
+            while active() do
+
+                -- =========================
+                -- CAST ROD
+                -- =========================
+                local success = pcall(function()
+                    return Fishing
                         :WaitForChild("CastRod")
                         :InvokeServer()
+                end)
 
-                    task.wait(2)
+                if not active() then
+                    break
+                end
 
-                    if not _G.AutoFishing then break end
+                if not success then
+                    task.wait(1)
+                    continue
+                end
 
-                    -- 2. Player Reaction
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
+                -- =========================
+                -- TUNGGU IKAN MENGGIGIT
+                -- =========================
+                local timeout = 0
+
+                while active()
+                    and not Player:GetAttribute("hasBite") do
+
+                    task.wait(0.1)
+
+                    timeout = timeout + 0.1
+
+                    if timeout >= 30 then
+                        break
+                    end
+                end
+
+                if not active() then
+                    break
+                end
+
+                -- =========================
+                -- IKAN MENGGIGIT
+                -- =========================
+                if Player:GetAttribute("hasBite") then
+
+                    Fishing
                         :WaitForChild("PlayerReaction")
                         :FireServer()
 
-                    task.wait(5)
+                    task.wait(0.1)
 
-                    if not _G.AutoFishing then break end
+                    -- =========================
+                    -- UPDATE BALL
+                    -- =========================
+                    local rod = Player.Character
+                        and Player.Character:FindFirstChild("FishingRod")
 
-                    -- 3. UpdateBall
-                    local args = {
-                        25.16900062561035,
-                        vector.create(-918.0528564453125, 7.072099208831787, -266.9685363769531),
-                        false
-                    }
+                    local ball = rod
+                        and rod:FindFirstChild("Ball")
 
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("UpdateBall")
-                        :FireServer(unpack(args))
+                    local body = rod
+                        and rod:FindFirstChild("Body")
 
-                    task.wait(2)
+                    if ball and body then
 
-                    if not _G.AutoFishing then break end
+                        local startPosition = ball.Position
 
-                    -- 4. UpdateBall
-                    local args = {
-                        25.40433692932129,
-                        vector.create(-918.0528564453125, 7.072099208831787, -266.9685363769531),
-                        false
-                    }
+                        -- Jalankan update selama minigame
+                        local miniGameTime = 0
 
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("UpdateBall")
-                        :FireServer(unpack(args))
+                        while active()
+                            and Player:GetAttribute("IsInMiniGame")
+                            and miniGameTime < 15 do
 
-                    task.wait(2)
+                            local character = Player.Character
 
-                    if not _G.AutoFishing then break end
+                            if not character
+                                or not character.PrimaryPart then
+                                break
+                            end
 
-                    -- 5. UpdateBall
-                    local args = {
-                        14.789852142333984,
-                        vector.create(-915.0775146484375, 7.072099208831787, -256.2286682128906),
-                        false
-                    }
+                            -- Posisi ball mengikuti karakter
+                            local playerPos =
+                                character:GetPivot().Position
 
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("UpdateBall")
-                        :FireServer(unpack(args))
+                            local position = Vector3.new(
+                                playerPos.X,
+                                startPosition.Y,
+                                playerPos.Z
+                            )
 
-                    task.wait(2)
+                            local distance =
+                                (position - body.Line.WorldPosition).Magnitude
+                                + 0.5
 
-                    if not _G.AutoFishing then break end
+                            Fishing
+                                :WaitForChild("UpdateBall")
+                                :FireServer(
+                                    distance,
+                                    position,
+                                    true
+                                )
 
-                    -- 6. UpdateBall
-                    local args = {
-                        10.79184627532959,
-                        vector.create(-913.689697265625, 7.072099208831787, -251.21902465820312),
-                        false
-                    }
+                            miniGameTime =
+                                miniGameTime + 0.05
 
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("UpdateBall")
-                        :FireServer(unpack(args))
+                            task.wait(0.05)
+                        end
+                    end
 
-                    task.wait(2)
+                    -- =========================
+                    -- PREPARE REEL
+                    -- =========================
+                    if active() then
 
-                    if not _G.AutoFishing then break end
+                        Fishing
+                            :WaitForChild("PrepareFishForReeling")
+                            :FireServer()
 
-                    -- 7. UpdateBall
-                    local args = {
-                        8.770051002502441,
-                        vector.create(-912.97607421875, 7.072099208831787, -248.64308166503906),
-                        false
-                    }
+                        task.wait(0.1)
 
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("UpdateBall")
-                        :FireServer(unpack(args))
+                        -- =========================
+                        -- REEL IN
+                        -- =========================
+                        Fishing
+                            :WaitForChild("ReelIn")
+                            :FireServer(2.5)
+                    end
+                end
 
-                    task.wait(2)
-
-                    if not _G.AutoFishing then break end
-
-                    -- 8. UpdateBall
-                    local args = {
-                        9.002052307128906,
-                        vector.create(-912.97607421875, 7.072099208831787, -248.64308166503906),
-                        false
-                    }
-
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("UpdateBall")
-                        :FireServer(unpack(args))
-
-                    task.wait(2)
-
-                    if not _G.AutoFishing then break end
-
-                    -- 9. Prepare Fish
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("PrepareFishForReeling")
-                        :FireServer()
-
-                    task.wait(2)
-
-                    if not _G.AutoFishing then break end
-
-                    -- 10. Reel In
-                    local args = {
-                        2.5
-                    }
-
-                    game:GetService("ReplicatedStorage")
-                        :WaitForChild("Remotes")
-                        :WaitForChild("Fishing")
-                        :WaitForChild("ReelIn")
-                        :FireServer(unpack(args))
-
-                    -- mulai lagi dari CastRod
+                -- Tunggu sebelum cast berikutnya
+                if active() then
                     task.wait(1)
                 end
-            end)
-        end
+            end
+        end)
     end
 })
 GUI:CreateToggle({
@@ -1160,4 +1167,28 @@ GUI:CreateToggle({
             end
         end)
     end
+})
+GUI:CreateToggle({
+    parent = main, 
+    text = "Auto Buy Blakes", 
+    default = false, 
+    callback = function(leave)
+      if leave then
+         -- Start the loop
+         _G.Blakes1 = true
+			while _G.Blakes1 == true do
+local args = {
+	"Buy",
+	"Blakes"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("PetsEvent"):FireServer(unpack(args))
+
+				task.wait(0.1) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.Blakes1 = false
+      end
+	  		print("Toggle state:", leave)
+   end
 })
