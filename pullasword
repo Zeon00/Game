@@ -357,43 +357,42 @@ GUI:CreateToggle({
     end
 })
 GUI:CreateToggle({
-    parent = main,
-    text = "Event",
-    default = false,
-    callback = function(hard)
+    parent = main, 
+    text = "Lunaris", 
+    default = false, 
+    callback = function(leave)
+      if leave then
+         -- Start the loop
+         _G.Lunaris1 = true
+			while _G.Lunaris1 == true do
+local args = {
+	"MegaBoss",
+	"Dragon10",
+	"Normal"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer(unpack(args))
+local args = {
+	0
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
+local args = {
+	"Dragon10",
+	"Normal"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local args = {
+	0
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 
-        _G.loop20 = hard
-
-        if hard then
-            task.spawn(function()
-                local RS = game:GetService("ReplicatedStorage")
-
-                local RemoveC = RS:WaitForChild("Remotes")
-                    :WaitForChild("Events")
-                    :WaitForChild("RemoveC")
-
-                local WinEvent = RS:WaitForChild("EventFolder")
-                    :WaitForChild("WinEvent")
-
-                while _G.loop20 do
-                    RemoveC:FireServer(1)
-                    task.wait(3)
-
-                    WinEvent:FireServer("1731")
-                    task.wait(3)
-
-                    WinEvent:FireServer("1732")
-                    task.wait(3)
-
-                    RemoveC:FireServer(0)
-
-                    task.wait(15)
-                end
-            end)
-        end
-
-        print("Toggle state:", hard)
-    end
+				task.wait(0.1) -- Adjust the wait time as needed
+			end
+      else
+         -- Stop the loop
+         _G.Lunaris1 = false
+      end
+	  		print("Toggle state:", leave)
+   end
 })
 GUI:CreateToggle({
     parent = main,
@@ -1191,4 +1190,169 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Event
       end
 	  		print("Toggle state:", leave)
    end
+})
+
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Race",
+    default = false,
+
+    callback = function(state)
+        _G.AutoTouchRing = state
+
+        if not state then
+            return
+        end
+
+        task.spawn(function()
+            local RS = game:GetService("ReplicatedStorage")
+            local Players = game:GetService("Players")
+            local Player = Players.LocalPlayer
+
+            local AngelsRace = RS
+                :WaitForChild("Remotes")
+                :WaitForChild("Events")
+                :WaitForChild("AngelsRace")
+
+            local Rings = workspace
+                :WaitForChild("SystemObjects")
+                :WaitForChild("CelestialEvent2026")
+                :WaitForChild("FlyLession")
+                :WaitForChild("Rings")
+
+            local Won = false
+            local Connection
+
+            -- Tunggu hasil race dari server
+            Connection = AngelsRace.OnClientEvent:Connect(function(event)
+                if event == "PlayerWon" then
+                    Won = true
+                    print("You Won Race!")
+                end
+            end)
+
+            while _G.AutoTouchRing do
+
+                Won = false
+
+                -- Start Race
+                AngelsRace:FireServer("StartRace", "3")
+
+                -- Tunggu 3 detik
+                task.wait(3)
+
+                if not _G.AutoTouchRing then
+                    break
+                end
+
+                -- Race Started
+                AngelsRace:FireServer("RaceStarted")
+
+                task.wait(1)
+
+                -- Touch Ring 1 sampai 8
+                for i = 1, 8 do
+
+                    if not _G.AutoTouchRing then
+                        break
+                    end
+
+                    local Ring = Rings:FindFirstChild(tostring(i))
+
+                    if Ring then
+                        local Character = Player.Character
+                        local HRP = Character
+                            and Character:FindFirstChild("HumanoidRootPart")
+
+                        if HRP then
+                            HRP.CFrame =
+                                Ring.CFrame + Vector3.new(0, 1, 0)
+                        end
+
+                        task.wait(2.5)
+                    else
+                        warn("Ring " .. i .. " tidak ditemukan")
+                        break
+                    end
+                end
+
+                if not _G.AutoTouchRing then
+                    break
+                end
+
+                -- TUNGGU SAMPAI BENAR-BENAR PLAYER WON
+                repeat
+                    task.wait(0.5)
+                until Won or not _G.AutoTouchRing
+
+                if not _G.AutoTouchRing then
+                    break
+                end
+
+                -- Setelah PlayerWon baru ulang StartRace
+                task.wait(1)
+            end
+
+            if Connection then
+                Connection:Disconnect()
+                Connection = nil
+            end
+        end)
+    end
+})
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Collect Fragments",
+    default = false,
+
+    callback = function(state)
+        _G.AutoCollectFragments = state
+
+        if not state then
+            return
+        end
+
+        task.spawn(function()
+            local Players = game:GetService("Players")
+            local Player = Players.LocalPlayer
+
+            local Fragments = workspace
+                :WaitForChild("SystemObjects")
+                :WaitForChild("CelestialEvent2026")
+                :WaitForChild("CollectFragments")
+
+            while _G.AutoCollectFragments do
+
+                for i = 1, 6 do
+                    if not _G.AutoCollectFragments then
+                        break
+                    end
+
+                    local Fragment = Fragments:FindFirstChild(tostring(i))
+
+                    if Fragment then
+                        local Character =
+                            Player.Character
+                            or Player.CharacterAdded:Wait()
+
+                        local HRP =
+                            Character:FindFirstChild("HumanoidRootPart")
+
+                        if HRP then
+                            HRP.CFrame =
+                                Fragment.CFrame
+                                + Vector3.new(0, 2, 0)
+                        end
+
+                        task.wait(1)
+                    else
+                        warn("Fragment " .. i .. " tidak ditemukan")
+                    end
+                end
+
+                -- Jeda sebelum mengulang
+                task.wait(1)
+            end
+        end)
+    end
 })
