@@ -275,7 +275,7 @@ task.wait()
 
 GUI:CreateToggle({
     parent = main,
-    text = "Chaos",
+    text = "Lunaris Normal",
     default = false,
     callback = function(chaos)
         _G.Chaos1 = chaos
@@ -287,7 +287,7 @@ GUI:CreateToggle({
 
             while _G.Chaos1 do
                 Events.RemoveC:FireServer(1)
-                Events.WinMegaBossEvent:FireServer("Dragon-5","Chaos")
+                Events.WinMegaBossEvent:FireServer("Dragon10","Normal")
                 Events.RemoveC:FireServer(0)
                 task.wait(0.05)
             end
@@ -356,44 +356,7 @@ GUI:CreateToggle({
         end)
     end
 })
-GUI:CreateToggle({
-    parent = main, 
-    text = "Lunaris", 
-    default = false, 
-    callback = function(leave)
-      if leave then
-         -- Start the loop
-         _G.Lunaris1 = true
-			while _G.Lunaris1 == true do
-local args = {
-	"MegaBoss",
-	"Dragon10",
-	"Normal"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("StartAutoFight"):FireServer(unpack(args))
-local args = {
-	0
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-local args = {
-	"Dragon10",
-	"Normal"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
-local args = {
-	0
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
 
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
-      else
-         -- Stop the loop
-         _G.Lunaris1 = false
-      end
-	  		print("Toggle state:", leave)
-   end
-})
 GUI:CreateToggle({
     parent = main,
     text = "Event4",
@@ -858,66 +821,64 @@ end
 	  		print("Toggle state:", Dungeon)
    end
 })
-GUI:CreateToggle({
-    parent = main, 
-    text = "Auto Hidden Dungeon", 
-    default = false, 
-    callback = function(leave)
-      if leave then
-         -- Start the loop
-         _G.leave1 = true
-			while _G.leave1 == true do
-local args = {
-	1
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-local args = {
-	"Dragon-1",
-	"Normal"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
-local args = {
-	"Dragon-1",
-	"Hard"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
-local args = {
-	"Dragon-1",
-	"Chaos"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Events = ReplicatedStorage
+    :WaitForChild("Remotes")
+    :WaitForChild("Events")
 
-local args = {
-	0
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-local args = {
-	"Dragon-5",
-	"Normal"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
-local args = {
-	"Dragon-5",
-	"Chaos"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
-local args = {
-	"Dragon-5",
-	"Hard"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("WinMegaBossEvent"):FireServer(unpack(args))
-local args = {
-	0
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Events"):WaitForChild("RemoveC"):FireServer(unpack(args))
-				task.wait(0.1) -- Adjust the wait time as needed
-			end
-      else
-         -- Stop the loop
-         _G.leave1 = false
-      end
-	  		print("Toggle state:", leave)
-   end
+local WinMegaBossEvent = Events:WaitForChild("WinMegaBossEvent")
+local RemoveC = Events:WaitForChild("RemoveC")
+
+local function AttackDragon(dragon)
+    task.spawn(function()
+        WinMegaBossEvent:FireServer(dragon, "Normal")
+    end)
+
+    task.spawn(function()
+        WinMegaBossEvent:FireServer(dragon, "Hard")
+    end)
+
+    task.spawn(function()
+        WinMegaBossEvent:FireServer(dragon, "Chaos")
+    end)
+end
+
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Hidden Dungeon",
+    default = false,
+
+    callback = function(state)
+        _G.leave1 = state
+
+        if state then
+            task.spawn(function()
+                while _G.leave1 do
+
+                    -- Aktifkan
+                    RemoveC:FireServer(1)
+
+                    -- Semua boss + semua mode
+                    -- dijalankan bersamaan
+                    AttackDragon("Dragon-1")
+                    AttackDragon("Dragon-3")
+                    AttackDragon("Dragon-4")
+                    AttackDragon("Dragon-5")
+
+                    task.wait(0.1)
+
+                    -- Matikan
+                    RemoveC:FireServer(0)
+
+                    task.wait(0.1)
+                end
+            end)
+        else
+            _G.leave1 = false
+        end
+
+        print("Auto Hidden Dungeon:", state)
+    end
 })
 GUI:CreateToggle({
     parent = main, 
@@ -1076,7 +1037,7 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("GameClient"):WaitForChild("Events"):WaitForChild("RemoteFunction"):WaitForChild("BuyEgg"):InvokeServer(unpack(args))
 
-				task.wait(0.1) -- Adjust the wait time as needed
+				task.wait(0.01) -- Adjust the wait time as needed
 			end
       else
          -- Stop the loop
@@ -1354,5 +1315,108 @@ GUI:CreateToggle({
                 task.wait(1)
             end
         end)
+    end
+})
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Sell Fish 1-3",
+    default = false,
+
+    callback = function(state)
+        _G.AutoSellFish = state
+
+        if state then
+            task.spawn(function()
+                local SellFish = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Remotes")
+                    :WaitForChild("Fishing")
+                    :WaitForChild("SellFish")
+
+                while _G.AutoSellFish do
+                    for i = 1, 3 do
+                        if not _G.AutoSellFish then
+                            break
+                        end
+
+                        SellFish:FireServer(i)
+                        task.wait(0.05)
+                    end
+
+                    task.wait(0.01)
+                end
+            end)
+        end
+    end
+})
+GUI:CreateToggle({
+    parent = main,
+    text = "Auto Weather Fight",
+    default = false,
+
+    callback = function(state)
+        _G.AutoWeatherFight = state
+
+        if state then
+            task.spawn(function()
+                while _G.AutoWeatherFight do
+
+                    local weatherDrop = nil
+
+                    -- Cari WeatherDrop yang sedang ada
+                    for _, obj in ipairs(workspace.Ignore:GetChildren()) do
+                        if obj.Name:match("^WeatherDrop_") then
+                            weatherDrop = obj
+                            break
+                        end
+                    end
+
+                    if weatherDrop then
+                        -- Ambil ID dari nama object
+                        local uuid = weatherDrop.Name:gsub("^WeatherDrop_", "")
+
+                        print("Weather UUID:", uuid)
+
+                        -- RequestFight
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Remotes")
+                            :WaitForChild("Weather")
+                            :WaitForChild("RequestFight")
+                            :FireServer(uuid)
+
+                        task.wait(1)
+
+                        -- RemoveC 1
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Remotes")
+                            :WaitForChild("Events")
+                            :WaitForChild("RemoveC")
+                            :FireServer(1)
+
+                        task.wait(1)
+
+                        -- FightClick
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Remotes")
+                            :WaitForChild("Weather")
+                            :WaitForChild("FightClick")
+                            :FireServer(uuid, "Ready")
+
+                        task.wait(1)
+
+                        -- RemoveC 0
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Remotes")
+                            :WaitForChild("Events")
+                            :WaitForChild("RemoveC")
+                            :FireServer(0)
+
+                    else
+                        print("WeatherDrop tidak ditemukan")
+                    end
+
+                    task.wait(2)
+                end
+            end)
+        end
     end
 })
