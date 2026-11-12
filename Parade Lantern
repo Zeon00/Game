@@ -1,0 +1,2421 @@
+--============================================================
+
+--AUTO FEST HUB | 5 TOGGLE | STANDALONE
+
+--DIRECT MOVETO | FLOOR GLOW RETRY + CHECKPOINT TELEPORT
+
+--============================================================
+
+local Players = game:GetService("Players")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Workspace = game:GetService("Workspace")
+
+local UserInputService = game:GetService("UserInputService")
+
+local CoreGui = game:GetService("CoreGui")
+
+local Player = Players.LocalPlayer
+
+local SwordShared = ReplicatedStorage:WaitForChild("SwordShared")
+local EventKit
+local Titles
+local EventState
+
+pcall(function()
+    EventKit = require(SwordShared:WaitForChild("EventKit"))
+    Titles = require(SwordShared:WaitForChild("Titles"))
+
+    local clientFolder = SwordShared:FindFirstChild("Client")
+    local stateModule = clientFolder and clientFolder:FindFirstChild("State", true)
+    if not stateModule then
+        stateModule = SwordShared:FindFirstChild("State", true)
+    end
+
+    if stateModule and stateModule:IsA("ModuleScript") then
+        EventState = require(stateModule)
+    end
+end)
+
+local RESTOCK_TELEPORT_POS = Vector3.new(
+    7.263270378112793,
+    3999.0439453125,
+    174.9276885986328
+)
+
+local RESTOCK_PREPARE_SECONDS = 5
+local TITLE_BUY_DELAY = 0.05
+
+
+--CONFIG MODE: FEST dan X7 berjalan TERPISAH
+
+local MODE_CONFIG = {
+
+    FEST = {
+
+        POS1 = Vector3.new(204.60000610351562, 3.19801926612854, 31.600004196166992),
+
+        POS2 = Vector3.new(211.99227905273438, 3.244025230407715, 32.36494827270508),
+
+        DUNGEON = "FEST",
+
+        COUNT = 4,
+
+        BOSS = "The Parade Master",
+
+        BLOCK_CHECK = Vector3.new(-7200.35546875, 437.9541931152344, -1464.262939453125),
+
+        BLOCK_TP = Vector3.new(-7200.07470703125, 437.99798583984375, -1472.1854248046875),
+
+        FLOOR_GLOW = Vector3.new(-7200, 452.200012, -1624.69995),
+
+        POS1_OFFSET = Vector3.new(0, 3, 0),
+
+        WALK_SPEED = 22,
+
+    },
+    X7 = {
+
+        POS1 = Vector3.new(0.0000027975256671197712, 4014.997802734375, -116),
+
+        POS2 = Vector3.new(-0.42467841506004333, 4018.31787109375, -128.8373565673828),
+
+        DUNGEON = "X7",
+
+        COUNT = 40,
+
+        BOSS = "Aurelion the Dawnforged",
+
+        BLOCK_CHECK = Vector3.new(4530, 4019.497802734375, -3418.3642578125),
+
+        BLOCK_TP = Vector3.new(4530.7880859375, 4018.997802734375, -3433.88330078125),
+
+        -- X7 FloorGlow diambil dinamis dari Workspace setelah dungeon dimuat.
+
+        FLOOR_GLOW = Vector3.new(0, 0, 0),
+
+        POS1_OFFSET = Vector3.zero,
+
+        WALK_SPEED = 22,
+
+    },
+
+}
+
+local ActiveConfig = MODE_CONFIG.FEST
+
+local ActiveMode = "FEST"
+
+local FLOOR_GLOW_POS = ActiveConfig.FLOOR_GLOW
+
+local IsGoingToFloorGlow = false
+
+-- Boss phase lock: FloorGlow tidak dicari ulang sampai LeaveDungeon berhasil.
+local BossPhaseActive = false
+local BossPhaseDelayDone = false
+
+local SKILLS = {"Q", "E", "R", "F"}
+
+local SWING_DELAY = 0.05
+
+local SKILL_DELAY = 0.5
+
+local BLOCK_RADIUS = 5
+
+local BLOCK_TP_VERIFY_RADIUS = 3
+
+local FLOOR_GLOW_RADIUS = 3
+
+--REMOTES
+
+local Remotes = ReplicatedStorage:WaitForChild("SwordShared"):WaitForChild("Remotes")
+
+local SwingRemote = Remotes:WaitForChild("Swing")
+
+local HitRemote = Remotes:WaitForChild("Hit")
+
+local RequestRemote = Remotes:WaitForChild("Request")
+
+--STATE
+
+local Running = true
+
+local AutoFest = false
+
+local AutoX7 = false
+
+local AutoCombat = false
+
+local AutoSkill = false
+
+local AutoDodge = false
+local AutoRestock = false
+local RestockRunId = 0
+
+local X7BlockPassed = false
+
+local FestBlockPassed = false
+
+local FestRunId = 0
+
+local X7RunId = 0
+
+local SwingIndex = 0
+
+local SkillIndex = 0
+
+local Character
+
+local Root
+
+local Humanoid
+
+local Gui
+local RestockPaused = false
+local RestockLeaving = false
+local Main
+
+local StatusLabel
+
+local ToggleButtons = {}
+
+local ToggleStates = {
+
+    ["AUTO FEST"] = false,
+
+    ["AUTO X7"] = false,
+
+    ["SWING + HIT"] = false,
+
+    ["AUTO SKILL"] = false,
+
+    ["AUTO DODGE"] = false,
+
+    ["AUTO RESTOCK"] = false
+
+}
+
+--CHARACTER
+
+local function updateCharacter()
+
+    Character = Player.Character
+
+    Root = Character and Character:FindFirstChild("HumanoidRootPart")
+
+    Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+end
+
+updateCharacter()
+
+Player.CharacterAdded:Connect(function()
+
+    task.wait(0.5)
+
+    updateCharacter()
+
+end)
+
+local function status(text)
+
+    if StatusLabel and StatusLabel.Parent then
+
+        StatusLabel.Text = "STATUS: " .. tostring(text)
+
+    end
+
+end
+
+local function alive(id)
+    return Running
+        and not RestockPaused
+        and (
+            (ActiveMode == "FEST" and AutoFest and FestRunId == id)
+            or
+            (ActiveMode == "X7" and AutoX7 and X7RunId == id)
+        )
+end
+
+--TOGGLE DISPLAY
+
+local function setToggle(name, value)
+
+    ToggleStates[name] = value
+
+    local button = ToggleButtons[name]
+
+    if button then
+
+        button.Text = name .. " : " .. (value and "ON" or "OFF")
+
+        button.BackgroundColor3 = value
+
+            and Color3.fromRGB(35, 145, 85)
+
+            or Color3.fromRGB(125, 55, 55)
+
+    end
+
+end
+
+--AUTO EVENT RESTOCK
+local function getEventShopData()
+    if not EventKit then return nil end
+
+    local ok, eventData = pcall(function()
+        return EventKit.latest()
+    end)
+
+    if ok and type(eventData) == "table" and eventData.Shop and eventData.Shop.List then
+        return eventData
+    end
+
+    return nil
+end
+
+local function teleportToRestockSpot()
+    updateCharacter()
+    if not Root then return false end
+
+    local oldCF = Root.CFrame
+    Root.CFrame =
+        CFrame.new(RESTOCK_TELEPORT_POS)
+        * (oldCF - oldCF.Position)
+
+    Root.AssemblyLinearVelocity = Vector3.zero
+    Root.AssemblyAngularVelocity = Vector3.zero
+    return true
+end
+
+local function tryBuyEventItem(eventData, item, slotId, isTitle)
+    local now = Workspace:GetServerTimeNow()
+
+    local stateOK, stateData = pcall(function()
+        return EventKit.state(Player)
+    end)
+
+    if not stateOK or type(stateData) ~= "table" then
+        return false, "Gagal membaca state event"
+    end
+
+    local buys = stateData.Buys or {}
+    local ownedTitles = {}
+
+    if isTitle and Titles and type(Titles.owned) == "function" then
+        local ownedOK, owned = pcall(function()
+            return Titles.owned(Player)
+        end)
+
+        if ownedOK and type(owned) == "table" then
+            ownedTitles = owned
+        end
+    end
+
+    if isTitle and item.Once and ownedTitles[item.Once] == true then
+        return false, "Title sudah dimiliki"
+    end
+
+    local leftOK, left = pcall(function()
+        return EventKit.Shop.left(eventData, buys, item.Key, now)
+    end)
+
+    if not leftOK or type(left) ~= "number" or left < 1 then
+        return false, "Batas pembelian habis"
+    end
+
+    if item.Stock then
+        local stockOK, stockTable = pcall(function()
+            return EventKit.Shop.stock(eventData, slotId)
+        end)
+
+        if not stockOK or type(stockTable) ~= "table" then
+            return false, "Gagal membaca stock"
+        end
+
+        local totalStock = tonumber(stockTable[item.Key]) or 0
+        local boughtThisSlot = 0
+
+        if buys.Slot == slotId and type(buys.Items) == "table" then
+            boughtThisSlot = tonumber(buys.Items[item.Key]) or 0
+        end
+
+        if totalStock - boughtThisSlot < 1 then
+            return false, "Stock kosong"
+        end
+    end
+
+    local requestOK, bought, response = pcall(function()
+        return RequestRemote:InvokeServer("EventBuy", item.Key)
+    end)
+
+    if not requestOK then
+        return false, tostring(bought)
+    end
+
+    if bought == false then
+        return false, tostring(response or "Pembelian ditolak")
+    end
+
+    return true, response
+end
+
+local EVENT_BUY_KEYS = {
+    "PowerPotion",
+    "Scroll",
+    "Crate",
+    "MegaPotion",
+    "AuraElixir",
+    "GemStash"
+}
+
+local function buyAllEventItems()
+    local boughtCount = 0
+    local skippedCount = 0
+
+    for _, itemKey in ipairs(EVENT_BUY_KEYS) do
+        local success, result = pcall(function()
+            return RequestRemote:InvokeServer("EventBuy", itemKey)
+        end)
+
+        if success and result ~= false then
+            boughtCount = boughtCount + 1
+            print("[RESTOCK] BERHASIL:", itemKey, result)
+        else
+            skippedCount = skippedCount + 1
+            warn("[RESTOCK] GAGAL:", itemKey, result)
+        end
+    end
+
+    status(string.format(
+        "RESTOCK SELESAI | Berhasil: %d/6 | Skip: %d",
+        boughtCount,
+        skippedCount
+    ))
+end
+
+local function startAutoRestock()
+    if AutoRestock then return end
+
+    if not EventKit or not RequestRemote then
+        status("AUTO RESTOCK gagal | EventKit/Request tidak ditemukan")
+        setToggle("AUTO RESTOCK", false)
+        return
+    end
+
+    AutoRestock = true
+    RestockRunId = RestockRunId + 1
+    local runId = RestockRunId
+
+    setToggle("AUTO RESTOCK", true)
+    status("AUTO RESTOCK ON | Memantau timer restock...")
+
+    task.spawn(function()
+        local preparedRestock = nil
+        local pausedForThisRestock = false
+
+        while Running and AutoRestock and RestockRunId == runId do
+            local eventData = getEventShopData()
+
+            if not eventData then
+                status("AUTO RESTOCK | Menunggu Event Shop...")
+                task.wait(1)
+                continue
+            end
+
+            local now = Workspace:GetServerTimeNow()
+            local slotId, _, nextRestock = EventKit.Shop.slot(eventData, now)
+
+            if type(nextRestock) ~= "number" then
+                status("AUTO RESTOCK | Timer tidak terbaca")
+                task.wait(1)
+                continue
+            end
+
+            local remaining = nextRestock - now
+            local restockKey = tostring(slotId) .. ":" .. tostring(nextRestock)
+
+            if remaining <= RESTOCK_PREPARE_SECONDS
+                and remaining > 0
+                and preparedRestock ~= restockKey then
+
+                preparedRestock = restockKey
+                pausedForThisRestock = true
+
+                local leaveOK = pauseDungeonForRestock()
+
+                if not leaveOK then
+                    preparedRestock = nil
+                    task.wait(0.5)
+                    continue
+                end
+            end
+
+            if remaining <= 0 then
+                local oldSlot = slotId
+                local oldRestock = nextRestock
+                local changed = false
+
+                status("RESTOCK | Menunggu slot berganti...")
+
+                while Running and AutoRestock and RestockRunId == runId do
+                    task.wait(0.05)
+
+                    local freshEvent = getEventShopData()
+                    if not freshEvent then continue end
+
+                    local freshNow = Workspace:GetServerTimeNow()
+                    local freshSlot, _, freshNext =
+                        EventKit.Shop.slot(freshEvent, freshNow)
+
+                    if freshSlot ~= oldSlot or freshNext ~= oldRestock then
+                        changed = true
+                        break
+                    end
+                end
+
+                if changed and Running and AutoRestock and RestockRunId == runId then
+                    status("RESTOCK BERGANTI | BORONG SEMUA ITEM...")
+                    buyAllEventItems()
+
+                    preparedRestock = nil
+
+                    if pausedForThisRestock then
+                        pausedForThisRestock = false
+                        resumeDungeonAfterRestock()
+                    end
+
+                    task.wait(0.5)
+                end
+            else
+                task.wait(0.1)
+            end
+        end
+    end)
+end
+
+local function resumeDungeonAfterRestock()
+    RestockPaused = false
+
+    if AutoFest or AutoX7 then
+        status("RESTOCK selesai | Melanjutkan dungeon dari POS1...")
+    else
+        status("RESTOCK selesai | Tidak ada mode dungeon aktif")
+    end
+end
+    AutoRestock = true
+    RestockRunId = RestockRunId + 1
+    local runId = RestockRunId
+
+    setToggle("AUTO RESTOCK", true)
+    status("AUTO RESTOCK ON | Memantau timer restock...")
+
+    task.spawn(function()
+        local preparedRestock = nil
+
+        while Running and AutoRestock and RestockRunId == runId do
+            local eventData = getEventShopData()
+
+            if not eventData then
+                status("AUTO RESTOCK | Menunggu Event Shop...")
+                task.wait(1)
+            else
+                local now = Workspace:GetServerTimeNow()
+                local slotId, _, nextRestock = EventKit.Shop.slot(eventData, now)
+
+                if type(nextRestock) ~= "number" then
+                    status("AUTO RESTOCK | Timer restock tidak terbaca")
+                    task.wait(1)
+                else
+                    local remaining = nextRestock - now
+                    local restockKey = tostring(slotId) .. ":" .. tostring(nextRestock)
+
+                    if remaining <= RESTOCK_PREPARE_SECONDS and remaining > 0
+                        and preparedRestock ~= restockKey then
+
+                        preparedRestock = restockKey
+                        if teleportToRestockSpot() then
+                            status(string.format(
+                                "RESTOCK %.1fs | TP ke spot pembelian...",
+                                math.max(0, remaining)
+                            ))
+                        else
+                            status("RESTOCK dekat | Gagal TP, karakter belum siap")
+                        end
+                    end
+
+                    if remaining <= 0 then
+                        -- Tunggu pergantian slot dari server agar pembelian tidak terlalu awal.
+                        local oldSlot = slotId
+                        local oldRestock = nextRestock
+                        local changed = false
+
+                        while Running and AutoRestock and RestockRunId == runId do
+                            task.wait(0.05)
+
+                            local freshEvent = getEventShopData()
+                            if not freshEvent then break end
+
+                            local freshNow = Workspace:GetServerTimeNow()
+                            local freshSlot, _, freshNext = EventKit.Shop.slot(freshEvent, freshNow)
+
+                            if freshSlot ~= oldSlot or freshNext ~= oldRestock then
+                                changed = true
+                                break
+                            end
+                        end
+
+                        if changed and Running and AutoRestock and RestockRunId == runId then
+                            status("RESTOCK BERGANTI | BORONG ITEM...")
+                            buyAllEventItems()
+                            preparedRestock = nil
+                            task.wait(0.25)
+                        else
+                            task.wait(0.1)
+                        end
+                    else
+                        task.wait(math.min(0.2, math.max(0.03, remaining - RESTOCK_PREPARE_SECONDS)))
+                    end
+                end
+            end
+        end
+    end)
+
+
+local function stopAutoRestock()
+    AutoRestock = false
+    RestockRunId = RestockRunId + 1
+    setToggle("AUTO RESTOCK", false)
+    status("AUTO RESTOCK OFF")
+end
+
+--MOB HELPERS
+
+local function getMobRoot(mob)
+
+    if not mob or not mob:IsA("Model") then return nil end
+
+    return mob:FindFirstChild("HumanoidRootPart")
+
+        or mob.PrimaryPart
+
+        or mob:FindFirstChild("RootPart")
+
+end
+
+local function getHealth(mob)
+
+    if not mob then return nil end
+
+    local hum = mob:FindFirstChildOfClass("Humanoid")
+
+    if hum then return hum.Health end
+
+    local health = mob:FindFirstChild("Health")
+
+    if health and health:IsA("NumberValue") then
+
+        return health.Value
+
+    end
+
+    local attr = mob:GetAttribute("Health")
+
+    if typeof(attr) == "number" then
+
+        return attr
+
+    end
+
+    return nil
+
+end
+
+local function isDead(mob)
+
+    if not mob or not mob.Parent then return true end
+
+    if mob:GetAttribute("Dead") == true then return true end
+
+    local dead = mob:FindFirstChild("Dead")
+
+    if dead and dead:IsA("BoolValue") and dead.Value then
+
+        return true
+
+    end
+
+    local hp = getHealth(mob)
+
+    return hp ~= nil and hp <= 0
+
+end
+
+local function validOwner(mob)
+
+    local owner = mob:GetAttribute("Owner")
+
+    if owner == nil then
+
+        local obj = mob:FindFirstChild("Owner")
+
+        if obj and obj:IsA("ValueBase") then
+
+            owner = obj.Value
+
+        end
+
+    end
+
+    if owner == nil or owner == "" or owner == 0 then
+
+        return true
+
+    end
+
+    return owner == Player.UserId or owner == Player.Name
+
+end
+
+local function getAllMobs()
+
+    local folder = Workspace:FindFirstChild("Enemies")
+
+    local result = {}
+
+    if not folder then return result end
+
+    for _, mob in ipairs(folder:GetChildren()) do
+
+        if mob:IsA("Model")
+
+            and not isDead(mob)
+
+            and validOwner(mob)
+
+            and getMobRoot(mob) then
+
+            table.insert(result, mob)
+
+        end
+
+    end
+
+    return result
+
+end
+
+local function getNearestMob()
+
+    updateCharacter()
+
+    if not Root then return nil end
+
+    local bestMob
+
+    local bestDistance = math.huge
+
+    for _, mob in ipairs(getAllMobs()) do
+
+        local mobRoot = getMobRoot(mob)
+
+        if mobRoot then
+
+            local distance = (Root.Position - mobRoot.Position).Magnitude
+
+            if distance < bestDistance then
+
+                bestDistance = distance
+
+                bestMob = mob
+
+            end
+
+        end
+
+    end
+
+    return bestMob
+
+end
+
+--OBJECT HELPERS
+
+local function getObjectPosition(object)
+
+    if not object then return nil end
+
+    if object:IsA("BasePart") then
+
+        return object.Position
+
+    end
+
+    if object:IsA("Model") then
+
+        return object:GetPivot().Position
+
+    end
+
+    local part = object:FindFirstChildWhichIsA("BasePart", true)
+
+    return part and part.Position or nil
+
+end
+
+local function getDungeonObject(path)
+
+    local current = Workspace:FindFirstChild("Dungeons")
+
+    if not current then return nil end
+
+    current = current:FindFirstChild(ActiveConfig.DUNGEON)
+
+    if not current then return nil end
+
+    for _, name in ipairs(path) do
+
+        current = current:FindFirstChild(name)
+
+        if not current then return nil end
+
+    end
+
+    return current
+
+end
+
+--DIRECT MOVETO
+
+local function moveToPosition(position, isActive, label, stopDistance)
+
+    stopDistance = stopDistance or 5
+
+    updateCharacter()
+
+    if not Root or not Humanoid then return false end
+
+    local oldSpeed = Humanoid.WalkSpeed
+
+    Humanoid.WalkSpeed = math.max(oldSpeed, ActiveConfig.WALK_SPEED)
+
+    local arrived = false
+
+    local lastMove = 0
+
+    while isActive() do
+
+        updateCharacter()
+
+        if not Root or not Humanoid or Humanoid.Health <= 0 then
+
+            break
+
+        end
+
+        local distance = (Root.Position - position).Magnitude
+
+        if distance <= stopDistance then
+
+            arrived = true
+
+            break
+
+        end
+
+        if os.clock() - lastMove >= 1 then
+
+            Humanoid:MoveTo(position)
+
+            lastMove = os.clock()
+
+        end
+
+        status(label .. " | " .. math.floor(distance) .. " studs")
+
+        task.wait(0.12)
+
+    end
+
+    updateCharacter()
+
+    if Humanoid then
+
+        Humanoid:MoveTo(Root and Root.Position or position)
+
+        Humanoid.WalkSpeed = oldSpeed
+
+    end
+
+    return arrived
+
+end
+
+--BOSS SPAWN CONTROL: FEST DODGE ONLY WHEN THE BOSS MODEL EXISTS
+local function activateBossPhaseDodge()
+    if ActiveMode == "FEST" then
+        AutoDodge = true
+        setToggle("AUTO DODGE", true)
+        status("The Parade Master terdeteksi | FloorGlow STOP | Auto Dodge TP ON")
+    else
+        AutoDodge = false
+        setToggle("AUTO DODGE", false)
+        status("Boss terdeteksi | FloorGlow STOP | X7 Dodge tetap OFF")
+    end
+end
+
+--FLOOR GLOW: CHECKPOINT TP RETRY + MOVETO FLOOR GLOW
+
+local function moveToFloorGlow(id)
+
+    updateCharacter()
+
+    if not Root or not Humanoid then return false end
+
+    IsGoingToFloorGlow = true
+
+    local oldSpeed = Humanoid.WalkSpeed
+
+    Humanoid.WalkSpeed = math.max(oldSpeed, ActiveConfig.WALK_SPEED)
+
+    local arrived = false
+
+    local lastMove = 0
+
+    while alive(id) and not BossPhaseActive do
+
+        -- PRIORITAS BOSS: jika model boss sudah muncul di Workspace.Enemies,
+        -- langsung kunci fase boss dan batalkan perjalanan FloorGlow.
+        local enemiesFolder = Workspace:FindFirstChild("Enemies")
+        local spawnedBoss = enemiesFolder and enemiesFolder:FindFirstChild(ActiveConfig.BOSS)
+        if spawnedBoss and spawnedBoss:IsA("Model") and spawnedBoss.Parent then
+            BossPhaseActive = true
+            BossPhaseDelayDone = false
+            if Humanoid and Root then Humanoid:MoveTo(Root.Position) end
+            activateBossPhaseDodge()
+            break
+        end
+
+        updateCharacter()
+
+        if not Root or not Humanoid or Humanoid.Health <= 0 then
+
+            task.wait(0.2)
+
+            continue
+
+        end
+
+--DETEKSI AREA PENGHALANG TANPA BERJALAN KE BLOCK_CHECK
+
+        local obstacleEnabled =
+            (ActiveMode == "X7" and not X7BlockPassed)
+            or (ActiveMode == "FEST" and not FestBlockPassed)
+
+        if obstacleEnabled then
+
+            local obstacleDistance =
+                (Root.Position - ActiveConfig.BLOCK_CHECK).Magnitude
+
+            if obstacleDistance <= BLOCK_RADIUS then
+
+                -- Kunci sebelum teleport agar hanya terjadi sekali per dungeon.
+                if ActiveMode == "X7" then
+                    X7BlockPassed = true
+                    status("X7 | Penghalang terdeteksi, TP sekali...")
+                else
+                    FestBlockPassed = true
+                    status("FEST | Penghalang terdeteksi, TP bypass sekali...")
+                end
+
+                Humanoid:MoveTo(Root.Position)
+                task.wait(0.1)
+
+                local oldCF = Root.CFrame
+                Root.CFrame =
+                    CFrame.new(ActiveConfig.BLOCK_TP)
+                    * (oldCF - oldCF.Position)
+
+                Root.AssemblyLinearVelocity = Vector3.zero
+                Root.AssemblyAngularVelocity = Vector3.zero
+
+                task.wait(0.2)
+
+                if ActiveMode == "X7" then
+                    status("X7 | Lanjut menuju FloorGlow")
+                else
+                    status("FEST | Bypass penghalang selesai, lanjut menuju FloorGlow")
+                end
+            end
+        end
+
+--SELALU BERJALAN LANGSUNG KE FLOOR GLOW
+
+        local distance = (Root.Position - FLOOR_GLOW_POS).Magnitude
+
+        if distance <= FLOOR_GLOW_RADIUS then
+
+            arrived = true
+
+            break
+
+        end
+
+        if os.clock() - lastMove >= 0.2 then
+
+            Humanoid:MoveTo(FLOOR_GLOW_POS)
+
+            lastMove = os.clock()
+
+        end
+
+        status("Menuju FloorGlow | " .. math.floor(distance) .. " studs")
+
+        task.wait(0.12)
+
+    end
+
+    updateCharacter()
+
+    if Humanoid then
+
+        Humanoid:MoveTo(Root and Root.Position or FLOOR_GLOW_POS)
+
+        Humanoid.WalkSpeed = oldSpeed
+
+    end
+
+    IsGoingToFloorGlow = false
+
+    return arrived or BossPhaseActive
+
+end
+
+local function clearDungeon(id, floorGlow)
+
+    if not floorGlow then
+
+        status("FloorGlow belum ditemukan!")
+
+        return false
+
+    end
+
+    status("Menuju checkpoint dan FloorGlow...")
+
+    local reached = moveToFloorGlow(id)
+
+    if reached then
+
+        status("FloorGlow tercapai!")
+
+    end
+
+    return reached
+
+end
+
+--SWING + HIT
+
+local function startCombat()
+
+    if AutoCombat then return end
+
+    AutoCombat = true
+
+    task.spawn(function()
+
+        while Running and AutoCombat do
+
+            SwingIndex = (SwingIndex % 3) + 1
+
+            pcall(function()
+
+                SwingRemote:FireServer(SwingIndex)
+
+            end)
+
+            local mobs = getAllMobs()
+
+            if #mobs > 0 then
+
+                pcall(function()
+
+                    HitRemote:FireServer(SwingIndex, 1, mobs)
+
+                end)
+
+            end
+
+            task.wait(SWING_DELAY)
+
+        end
+
+    end)
+
+end
+
+local function stopCombat()
+
+    AutoCombat = false
+
+end
+
+--AUTO SKILL
+
+local function startSkill()
+
+    if AutoSkill then return end
+
+    AutoSkill = true
+
+    task.spawn(function()
+
+        while Running and AutoSkill do
+
+            local mob = getNearestMob()
+
+            local mobRoot = mob and getMobRoot(mob)
+
+            if mobRoot and not isDead(mob) then
+
+                SkillIndex = (SkillIndex % #SKILLS) + 1
+
+                local key = SKILLS[SkillIndex]
+
+                pcall(function()
+
+                    RequestRemote:InvokeServer("UseSkill", key, {
+
+                        point = mobRoot.Position
+
+                    })
+
+                end)
+
+            end
+
+            task.wait(SKILL_DELAY)
+
+        end
+
+    end)
+
+end
+
+local function stopSkill()
+
+    AutoSkill = false
+
+end
+
+--AUTO DODGE
+
+local DODGE = {
+
+    SCAN_INTERVAL = 0.08,
+
+    FX_REFRESH_INTERVAL = 0.3,
+
+    COOLDOWN = 0.2,
+
+    TRIGGER_MARGIN = 14,
+
+    SAFE_MARGIN = 6,
+
+    SEARCH_DISTANCES = {16, 22, 28, 36, 45},
+
+    ANGLE_STEP = 15,
+
+    MAX_RISE = 5,
+
+    MAX_DROP = 7
+
+}
+
+local lastDodge = 0
+
+local lastFXRefresh = 0
+
+local cachedRings = {}
+
+local cachedWedges = {}
+
+local function horizontalDistance(a, b)
+
+    local x = a.X - b.X
+
+    local z = a.Z - b.Z
+
+    return math.sqrt(x*x + z*z)
+
+end
+
+local function getDangerObjects()
+
+    if os.clock() - lastFXRefresh < DODGE.FX_REFRESH_INTERVAL then
+
+        return cachedRings, cachedWedges
+
+    end
+
+    lastFXRefresh = os.clock()
+
+    local rings = {}
+
+    local wedges = {}
+
+    for _, folder in ipairs(Workspace:GetDescendants()) do
+
+        if folder.Name == "ClientFX" and folder:IsA("Folder") then
+
+            for _, obj in ipairs(folder:GetDescendants()) do
+
+                if obj:IsA("BasePart") and obj.Transparency < 1 then
+
+                    local name = string.lower(obj.Name)
+
+                    if name == "ring" then
+
+                        table.insert(rings, obj)
+
+                    elseif name == "wedge"
+
+                        or name:find("fan")
+
+                        or name:find("sector") then
+
+                        table.insert(wedges, obj)
+
+                    end
+
+                end
+
+            end
+
+        end
+
+    end
+
+    cachedRings = rings
+
+    cachedWedges = wedges
+
+    return rings, wedges
+
+end
+
+local function insideRing(position, ring, margin)
+
+    local radius = math.max(ring.Size.X, ring.Size.Z) / 2
+
+    return horizontalDistance(position, ring.Position) <= radius + margin
+
+end
+
+local function insideWedge(position, wedge, margin)
+
+    local localPos = wedge.CFrame:PointToObjectSpace(position)
+
+    local radius = math.max(wedge.Size.X, wedge.Size.Z) / 2 + margin
+
+    if math.sqrt(localPos.X^2 + localPos.Z^2) > radius then
+
+        return false
+
+    end
+
+    local angle = wedge:GetAttribute("SectorAngle")
+
+        or wedge:GetAttribute("FanAngle")
+
+        or wedge:GetAttribute("AngleDegrees")
+
+    if typeof(angle) == "number" then
+
+        local playerAngle = math.deg(math.atan2(localPos.X, -localPos.Z))
+
+        return math.abs(playerAngle) <= angle / 2
+
+    end
+
+    local half = wedge.Size / 2
+
+    return math.abs(localPos.X) <= half.X + margin
+
+        and math.abs(localPos.Y) <= half.Y + margin
+
+        and math.abs(localPos.Z) <= half.Z + margin
+
+end
+
+local function isSafePosition(position, rings, wedges)
+
+    for _, ring in ipairs(rings) do
+
+        if ring.Parent and insideRing(position, ring, DODGE.SAFE_MARGIN) then
+
+            return false
+
+        end
+
+    end
+
+    for _, wedge in ipairs(wedges) do
+
+        if wedge.Parent and insideWedge(position, wedge, DODGE.SAFE_MARGIN) then
+
+            return false
+
+        end
+
+    end
+
+    return true
+
+end
+
+local function getGroundPosition(position)
+
+    updateCharacter()
+
+    if not Root or not Character or not Humanoid then return nil end
+
+    local params = RaycastParams.new()
+
+    params.FilterType = Enum.RaycastFilterType.Exclude
+
+    params.FilterDescendantsInstances = {Character}
+
+    params.IgnoreWater = true
+
+    local result = Workspace:Raycast(
+
+        position + Vector3.new(0, 12, 0),
+
+        Vector3.new(0, -45, 0),
+
+        params
+
+    )
+
+    if not result or result.Normal.Y < 0.75 then return nil end
+
+    if result.Material == Enum.Material.Water then return nil end
+
+    local difference = result.Position.Y - Root.Position.Y
+
+    if difference > DODGE.MAX_RISE or difference < -DODGE.MAX_DROP then
+
+        return nil
+
+    end
+
+    local radius = 3.5
+
+    for _, offset in ipairs({
+
+        Vector3.new(radius, 0, 0),
+
+        Vector3.new(-radius, 0, 0),
+
+        Vector3.new(0, 0, radius),
+
+        Vector3.new(0, 0, -radius)
+
+    }) do
+
+        local side = Workspace:Raycast(
+
+            result.Position + offset + Vector3.new(0, 5, 0),
+
+            Vector3.new(0, -12, 0),
+
+            params
+
+        )
+
+        if not side or side.Normal.Y < 0.75 then return nil end
+
+        if math.abs(side.Position.Y - result.Position.Y) > 3.5 then
+
+            return nil
+
+        end
+
+    end
+
+    local direction = result.Position - Root.Position
+
+    local wall = Workspace:Raycast(
+
+        Root.Position + Vector3.new(0, 2, 0),
+
+        direction,
+
+        params
+
+    )
+
+    if wall then return nil end
+
+    return result.Position + Vector3.new(
+
+        0,
+
+        Humanoid.HipHeight + Root.Size.Y / 2 + 0.5,
+
+        0
+
+    )
+
+end
+
+local function runDodge()
+
+    updateCharacter()
+
+    if not Root or not Humanoid or Humanoid.Health <= 0 then return end
+
+    if os.clock() - lastDodge < DODGE.COOLDOWN then return end
+
+    local rings, wedges = getDangerObjects()
+
+    if #rings == 0 and #wedges == 0 then return end
+
+    local danger = false
+
+    for _, ring in ipairs(rings) do
+
+        if ring.Parent and insideRing(Root.Position, ring, DODGE.TRIGGER_MARGIN) then
+
+            danger = true
+
+            break
+
+        end
+
+    end
+
+    if not danger then
+
+        for _, wedge in ipairs(wedges) do
+
+            if wedge.Parent and insideWedge(Root.Position, wedge, DODGE.TRIGGER_MARGIN) then
+
+                danger = true
+
+                break
+
+            end
+
+        end
+
+    end
+
+    if not danger then return end
+
+    for _, distance in ipairs(DODGE.SEARCH_DISTANCES) do
+
+        for angle = 0, 359, DODGE.ANGLE_STEP do
+
+            local radians = math.rad(angle)
+
+            local candidate = Root.Position + Vector3.new(
+
+                math.cos(radians) * distance,
+
+                0,
+
+                math.sin(radians) * distance
+
+            )
+
+            local ground = getGroundPosition(candidate)
+
+            if ground and isSafePosition(ground, rings, wedges) then
+
+                local oldCFrame = Root.CFrame
+
+                lastDodge = os.clock()
+
+                pcall(function()
+
+                    Root.CFrame = CFrame.new(ground)
+
+                        * (oldCFrame - oldCFrame.Position)
+
+                    Root.AssemblyLinearVelocity = Vector3.zero
+
+                    Root.AssemblyAngularVelocity = Vector3.zero
+
+                end)
+
+--SETELAH DODGE, BIARKAN ROUTE FLOOR GLOW MELANJUTKAN
+
+--Tidak ada TP balik ke BLOCK_TP atau BLOCK_CHECK.
+
+                if IsGoingToFloorGlow then
+
+                    status("DODGE | Aman, lanjut ke FloorGlow")
+
+                else
+
+                    status("DODGE | Ring " .. #rings .. " | Fan " .. #wedges)
+
+                end
+
+return
+
+            end
+
+        end
+
+    end
+
+end
+
+task.spawn(function()
+
+    while Running do
+
+        if AutoDodge then
+
+            pcall(runDodge)
+
+        end
+
+        task.wait(DODGE.SCAN_INTERVAL)
+
+    end
+
+end)
+
+--BOSS
+
+local function getBoss()
+
+    local enemies = Workspace:FindFirstChild("Enemies")
+
+    if not enemies then return nil end
+
+    return enemies:FindFirstChild(ActiveConfig.BOSS)
+
+end
+
+local function getBossHealth(boss)
+
+    if not boss then return nil end
+
+    local hum = boss:FindFirstChildOfClass("Humanoid")
+
+    if hum then
+
+        return hum.Health
+
+    end
+
+    local health = boss:FindFirstChild("Health")
+
+    if health and (health:IsA("NumberValue") or health:IsA("IntValue")) then
+
+        return health.Value
+
+    end
+
+    local attribute = boss:GetAttribute("Health")
+
+    if typeof(attribute) == "number" then
+
+        return attribute
+
+    end
+
+    return nil
+
+end
+
+local function waitBossDefeated(id)
+    status("Menunggu " .. ActiveConfig.BOSS .. "...")
+    local boss = nil
+    local confirmedAlive = false
+
+    -- Cari boss sampai model dan HP siap. Tidak ada pencarian FloorGlow di sini.
+    while alive(id) do
+        if not boss or not boss.Parent then boss = getBoss() end
+        if boss and boss.Parent then
+            -- Dodge baru ON saat model boss benar-benar muncul di Workspace.Enemies.
+            activateBossPhaseDodge()
+            local hp = getBossHealth(boss)
+            if hp ~= nil then
+                if hp <= 0 then
+                    status("HP Boss 0 | BOSS KALAH!")
+                    return true
+                end
+                confirmedAlive = true
+                break
+            end
+        end
+        task.wait(0.2)
+    end
+    if not alive(id) then return false end
+
+    status("Boss ditemukan | Mendekati " .. ActiveConfig.BOSS .. "...")
+    local lastBossMove = 0
+
+    -- Dekati boss; jika root belum siap, tunggu tanpa reset ke FloorGlow.
+    while alive(id) and boss and boss.Parent do
+        updateCharacter()
+        local bossRoot = getMobRoot(boss)
+        if bossRoot and Root and Humanoid then
+            local distance = (Root.Position - bossRoot.Position).Magnitude
+            if distance <= 8 then break end
+            if os.clock() - lastBossMove >= 0.4 then
+                Humanoid:MoveTo(bossRoot.Position)
+                lastBossMove = os.clock()
+            end
+            status("Menuju boss | " .. math.floor(distance) .. " studs")
+        end
+        local hp = getBossHealth(boss)
+        if hp ~= nil and hp <= 0 then
+            status("HP Boss 0 | BOSS KALAH!")
+            return true
+        end
+        task.wait(0.12)
+    end
+
+    updateCharacter()
+    if Humanoid and Root then Humanoid:MoveTo(Root.Position) end
+    status("Melawan " .. ActiveConfig.BOSS .. "...")
+
+    -- Pantau boss yang sama sampai HP 0 / model hilang.
+    while alive(id) do
+        if not boss or not boss.Parent then
+            if confirmedAlive then
+                status("Boss menghilang | DIANGGAP KALAH!")
+                return true
+            end
+            boss = getBoss()
+            if not boss then
+                task.wait(0.2)
+                continue
+            end
+        end
+        local hp = getBossHealth(boss)
+        if hp ~= nil then
+            if hp <= 0 then
+                status("HP Boss 0 | BOSS KALAH!")
+                return true
+            end
+            confirmedAlive = true
+        end
+        task.wait(0.15)
+    end
+    return false
+end
+
+local function bossDead(boss)
+
+    if not boss or not boss.Parent then return true end
+
+    return isDead(boss)
+
+end
+
+--COMBAT AUTO CONTROL
+
+local function setAutoDodge(enabled)
+
+    AutoDodge = enabled and true or false
+
+    setToggle("AUTO DODGE", AutoDodge)
+
+end
+
+local function setFestCombat(enabled)
+
+    if enabled then
+
+        startCombat()
+
+        startSkill()
+
+        -- Dodge TP sengaja belum aktif saat perjalanan menuju FloorGlow.
+
+        setAutoDodge(false)
+
+        setToggle("SWING + HIT", true)
+
+        setToggle("AUTO SKILL", true)
+
+    else
+
+        stopCombat()
+
+        stopSkill()
+
+        setAutoDodge(false)
+
+        setToggle("SWING + HIT", false)
+
+        setToggle("AUTO SKILL", false)
+
+    end
+
+end
+
+local function finishBossPhase(id)
+    if not BossPhaseActive then return false end
+
+    if not BossPhaseDelayDone then
+        status("FloorGlow tercapai | Fase boss dikunci | Tunggu 2 detik...")
+        task.wait(2)
+        BossPhaseDelayDone = true
+    end
+
+    while alive(id) do
+        if waitBossDefeated(id) then break end
+        if alive(id) then
+            status("Fase boss aktif | Menunggu boss, tidak mencari FloorGlow...")
+            task.wait(1)
+        end
+    end
+    if not alive(id) then return false end
+
+    status("BOSS KALAH | Auto Dodge OFF | LeaveDungeon " .. ActiveConfig.DUNGEON .. "...")
+    setAutoDodge(false)
+    setFestCombat(false)
+
+    -- Tetap di fase boss sampai LeaveDungeon benar-benar diterima.
+    while alive(id) do
+        local leaveOK, leaveResult = pcall(function()
+            return RequestRemote:InvokeServer("LeaveDungeon")
+        end)
+        if leaveOK and leaveResult ~= false then
+            BossPhaseActive = false
+            BossPhaseDelayDone = false
+            status(ActiveConfig.DUNGEON .. " selesai | Menyiapkan POS1 berikutnya...")
+            task.wait(1)
+            return true
+        end
+        status("LeaveDungeon belum berhasil | Tetap di fase boss, retry 2 detik...")
+        task.wait(2)
+    end
+    return false
+end
+
+local function runOneDungeon(id)
+
+    if BossPhaseActive then
+        status("Melanjutkan fase boss | FloorGlow dikunci, tidak dicari ulang...")
+        return finishBossPhase(id)
+    end
+    BossPhaseDelayDone = false
+
+    updateCharacter()
+
+    if not Root then return false end
+
+    if ActiveMode == "X7" then
+
+        X7BlockPassed = false
+
+    elseif ActiveMode == "FEST" then
+
+        FestBlockPassed = false
+
+    end
+
+    status("[" .. ActiveMode .. "] Teleport POS1...")
+
+    Root.CFrame = CFrame.new(ActiveConfig.POS1 + ActiveConfig.POS1_OFFSET)
+
+    task.wait(0.3)
+
+    if not alive(id) then return false end
+
+    status("[" .. ActiveMode .. "] Lari menuju POS2...")
+
+    if not moveToPosition(ActiveConfig.POS2, function() return alive(id) end, "POS2", 5) then
+
+        return false
+
+    end
+
+    task.wait(2)
+
+    if not alive(id) then return false end
+
+    status("EnterDungeon " .. ActiveConfig.DUNGEON .. "...")
+
+    local ok, result = pcall(function()
+
+        return RequestRemote:InvokeServer("EnterDungeon", ActiveConfig.DUNGEON, ActiveConfig.COUNT)
+
+    end)
+
+    if not ok then
+
+        status("EnterDungeon error: " .. tostring(result))
+
+        return false
+
+    end
+
+    if result == false then
+
+        status("EnterDungeon ditolak.")
+
+        return false
+
+    end
+
+    setFestCombat(true)
+
+    if ActiveMode == "X7" then
+
+        setAutoDodge(false)
+
+        status(ActiveConfig.DUNGEON .. " masuk | Auto Hit + Skill ON | Dodge OFF")
+
+    else
+
+        status(ActiveConfig.DUNGEON .. " masuk | Auto Hit + Skill ON | Dodge OFF")
+
+    end
+
+    task.wait(0.3)
+
+    local floorGlow
+
+    -- Cek boss lebih dahulu. Jika boss sudah ada di Enemies, jangan cari FloorGlow.
+    while alive(id) do
+
+        local enemiesFolder = Workspace:FindFirstChild("Enemies")
+        local spawnedBoss = enemiesFolder and enemiesFolder:FindFirstChild(ActiveConfig.BOSS)
+        if spawnedBoss and spawnedBoss:IsA("Model") and spawnedBoss.Parent then
+            BossPhaseActive = true
+            BossPhaseDelayDone = false
+            activateBossPhaseDodge()
+            break
+        end
+
+        local door = getDungeonObject({"BossDoor"})
+        floorGlow = door and door:FindFirstChild("FloorGlow")
+        if floorGlow then break end
+
+        task.wait(0.1)
+
+    end
+
+    if not alive(id) then return false end
+
+    -- Kalau boss muncul saat menunggu FloorGlow, langsung masuk fase boss.
+    if not BossPhaseActive then
+        local glowPosition = getObjectPosition(floorGlow)
+        if not glowPosition then
+            status("FloorGlow tidak punya posisi!")
+            return false
+        end
+
+        FLOOR_GLOW_POS = glowPosition
+        if not clearDungeon(id, floorGlow) then return false end
+
+        -- Bisa saja boss spawn saat karakter sedang bergerak ke FloorGlow.
+        if not BossPhaseActive then
+            BossPhaseActive = true
+            BossPhaseDelayDone = false
+            status("FloorGlow tercapai | Perjalanan berhenti | Menunggu boss muncul...")
+        end
+    end
+
+    if ActiveMode == "X7" then
+        setAutoDodge(false)
+        status("X7 | Fase boss terkunci | Dodge OFF | Menunggu boss...")
+    else
+        setAutoDodge(false)
+        status("Fase boss terkunci | FloorGlow STOP | Menunggu The Parade Master...")
+    end
+
+    if not alive(id) then return false end
+    return finishBossPhase(id)
+
+end
+
+local function stopMode(mode)
+
+    if mode == "FEST" then
+
+        AutoFest = false
+
+        FestRunId = FestRunId + 1
+
+        setToggle("AUTO FEST", false)
+
+    else
+
+        AutoX7 = false
+
+        X7RunId = X7RunId + 1
+
+        setToggle("AUTO X7", false)
+
+    end
+
+    setFestCombat(false)
+    BossPhaseActive = false
+    BossPhaseDelayDone = false
+
+    updateCharacter()
+
+    if Humanoid and Root then Humanoid:MoveTo(Root.Position) end
+
+    status("AUTO " .. mode .. " dihentikan.")
+
+end
+
+local function startMode(mode)
+
+    -- Mutual exclusion: hanya satu mode dungeon boleh aktif.
+
+    if mode == "FEST" then
+
+        if AutoFest then return end
+
+        if AutoX7 then
+            stopMode("X7")
+        end
+
+        ActiveMode = "FEST"
+        ActiveConfig = MODE_CONFIG.FEST
+        FLOOR_GLOW_POS = ActiveConfig.FLOOR_GLOW
+
+        AutoFest = true
+        FestRunId = FestRunId + 1
+
+        local id = FestRunId
+
+        setToggle("AUTO FEST", true)
+        setToggle("AUTO X7", false)
+
+        status("Memulai AUTO FEST...")
+
+        task.spawn(function()
+
+            while Running and AutoFest and FestRunId == id do
+
+                -- PAUSE RESTOCK: toggle FEST tetap ON.
+                while Running and AutoFest
+                    and FestRunId == id
+                    and RestockPaused do
+
+                    task.wait(0.1)
+                end
+
+                if not Running or not AutoFest or FestRunId ~= id then
+                    break
+                end
+
+                local success, result = pcall(runOneDungeon, id)
+
+                -- Jika restock sedang berlangsung, jangan matikan FEST.
+                if RestockPaused then
+                    task.wait(0.1)
+                    continue
+                end
+
+                if not Running or not AutoFest or FestRunId ~= id then
+                    break
+                end
+
+                if not success then
+                    status("ERROR FEST: " .. tostring(result))
+                    task.wait(2)
+
+                elseif not result then
+                    status("FEST gagal | Coba ulang dari POS1...")
+                    task.wait(2)
+
+                else
+                    status("FEST selesai | Dungeon berikutnya...")
+                    task.wait(1)
+                end
+
+            end
+
+            -- Hanya OFF jika pengguna benar-benar menghentikan mode.
+            if FestRunId == id and not RestockPaused then
+                AutoFest = false
+                setFestCombat(false)
+                setToggle("AUTO FEST", false)
+                status("AUTO FEST selesai / berhenti.")
+            end
+
+        end)
+
+    else
+
+        if AutoX7 then return end
+
+        if AutoFest then
+            stopMode("FEST")
+        end
+
+        ActiveMode = "X7"
+        ActiveConfig = MODE_CONFIG.X7
+        FLOOR_GLOW_POS = ActiveConfig.FLOOR_GLOW
+
+        AutoX7 = true
+        X7RunId = X7RunId + 1
+
+        local id = X7RunId
+
+        setToggle("AUTO X7", true)
+        setToggle("AUTO FEST", false)
+
+        status("Memulai AUTO X7...")
+
+        task.spawn(function()
+
+            while Running and AutoX7 and X7RunId == id do
+
+                -- PAUSE RESTOCK: toggle X7 tetap ON.
+                while Running and AutoX7
+                    and X7RunId == id
+                    and RestockPaused do
+
+                    task.wait(0.1)
+                end
+
+                if not Running or not AutoX7 or X7RunId ~= id then
+                    break
+                end
+
+                local success, result = pcall(runOneDungeon, id)
+
+                -- Jangan anggap pause restock sebagai kegagalan dungeon.
+                if RestockPaused then
+                    task.wait(0.1)
+                    continue
+                end
+
+                if not Running or not AutoX7 or X7RunId ~= id then
+                    break
+                end
+
+                if not success then
+
+                    status("ERROR X7: " .. tostring(result) .. " | Coba ulang 3 detik...")
+                    task.wait(3)
+
+                elseif not result then
+
+                    status("Siklus X7 belum selesai | Ulang dari POS1 dalam 3 detik...")
+                    task.wait(3)
+
+                else
+
+                    status("X7 selesai | Ulang dungeon berikutnya...")
+                    task.wait(1)
+
+                end
+
+            end
+
+            -- Hanya OFF jika pengguna benar-benar menghentikan mode.
+            if X7RunId == id and not RestockPaused then
+                AutoX7 = false
+                setFestCombat(false)
+                setToggle("AUTO X7", false)
+                status("AUTO X7 selesai / berhenti.")
+            end
+
+        end)
+
+    end
+
+end
+
+local function stopFest()
+
+    if AutoFest then stopMode("FEST") end
+
+end
+
+local function stopX7()
+
+    if AutoX7 then stopMode("X7") end
+
+end
+
+--GUI
+
+pcall(function()
+
+    local old = CoreGui:FindFirstChild("AutoFestFourToggle")
+
+    if old then old:Destroy() end
+
+end)
+
+Gui = Instance.new("ScreenGui")
+
+Gui.Name = "AutoFestFourToggle"
+
+Gui.ResetOnSpawn = false
+
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local parentOK = pcall(function()
+
+    Gui.Parent = CoreGui
+
+end)
+
+if not parentOK or not Gui.Parent then
+
+    Gui.Parent = Player:WaitForChild("PlayerGui")
+
+end
+
+Main = Instance.new("Frame")
+
+Main.Size = UDim2.fromOffset(260, 307)
+
+Main.Position = UDim2.new(0.5, -130, 0.5, -117)
+
+Main.BackgroundColor3 = Color3.fromRGB(23, 25, 32)
+
+Main.BorderSizePixel = 0
+
+Main.Parent = Gui
+
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 9)
+
+local stroke = Instance.new("UIStroke")
+
+stroke.Color = Color3.fromRGB(75, 82, 105)
+
+stroke.Parent = Main
+
+local Header = Instance.new("Frame")
+
+Header.Size = UDim2.new(1, 0, 0, 32)
+
+Header.BackgroundColor3 = Color3.fromRGB(38, 41, 53)
+
+Header.BorderSizePixel = 0
+
+Header.Parent = Main
+
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 9)
+
+local Title = Instance.new("TextLabel")
+
+Title.Size = UDim2.new(1, -75, 1, 0)
+
+Title.Position = UDim2.fromOffset(10, 0)
+
+Title.BackgroundTransparency = 1
+
+Title.Text = "AUTO FEST HUB"
+
+Title.TextColor3 = Color3.fromRGB(240, 240, 255)
+
+Title.Font = Enum.Font.GothamBold
+
+Title.TextSize = 13
+
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+Title.Parent = Header
+
+local Minimize = Instance.new("TextButton")
+
+Minimize.Size = UDim2.fromOffset(25, 24)
+
+Minimize.Position = UDim2.new(1, -57, 0, 4)
+
+Minimize.BackgroundColor3 = Color3.fromRGB(75, 80, 100)
+
+Minimize.Text = "-"
+
+Minimize.TextColor3 = Color3.new(1, 1, 1)
+
+Minimize.Font = Enum.Font.GothamBold
+
+Minimize.TextSize = 17
+
+Minimize.Parent = Header
+
+Instance.new("UICorner", Minimize).CornerRadius = UDim.new(0, 5)
+
+local Destroy = Instance.new("TextButton")
+
+Destroy.Size = UDim2.fromOffset(25, 24)
+
+Destroy.Position = UDim2.new(1, -29, 0, 4)
+
+Destroy.BackgroundColor3 = Color3.fromRGB(150, 55, 60)
+
+Destroy.Text = "X"
+
+Destroy.TextColor3 = Color3.new(1, 1, 1)
+
+Destroy.Font = Enum.Font.GothamBold
+
+Destroy.TextSize = 12
+
+Destroy.Parent = Header
+
+Instance.new("UICorner", Destroy).CornerRadius = UDim.new(0, 5)
+
+local ButtonHolder = Instance.new("Frame")
+
+ButtonHolder.Size = UDim2.new(1, -16, 0, 222)
+
+ButtonHolder.Position = UDim2.fromOffset(8, 39)
+
+ButtonHolder.BackgroundTransparency = 1
+
+ButtonHolder.Parent = Main
+
+local layout = Instance.new("UIListLayout")
+
+layout.Padding = UDim.new(0, 5)
+
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+layout.Parent = ButtonHolder
+
+local names = {
+
+    "AUTO FEST",
+
+    "AUTO X7",
+
+    "SWING + HIT",
+
+    "AUTO SKILL",
+
+    "AUTO DODGE",
+
+    "AUTO RESTOCK"
+
+}
+
+local function makeToggle(name, order)
+
+    local button = Instance.new("TextButton")
+
+    button.Name = name
+
+    button.Size = UDim2.new(1, 0, 0, 32)
+
+    button.BackgroundColor3 = Color3.fromRGB(125, 55, 55)
+
+    button.Text = name .. " : OFF"
+
+    button.TextColor3 = Color3.new(1, 1, 1)
+
+    button.TextSize = 12
+
+    button.Font = Enum.Font.GothamBold
+
+    button.LayoutOrder = order
+
+    button.Parent = ButtonHolder
+
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+
+    ToggleButtons[name] = button
+
+    button.MouseButton1Click:Connect(function()
+
+        local value = not ToggleStates[name]
+
+        if name == "AUTO FEST" then
+
+            if value then startMode("FEST") else stopFest() end
+
+        elseif name == "AUTO X7" then
+
+            if value then startMode("X7") else stopX7() end
+
+        elseif name == "SWING + HIT" then
+
+            if value then startCombat() else stopCombat() end
+
+            setToggle(name, value)
+
+        elseif name == "AUTO SKILL" then
+
+            if value then startSkill() else stopSkill() end
+
+            setToggle(name, value)
+
+        elseif name == "AUTO DODGE" then
+
+            AutoDodge = value
+
+            setToggle(name, value)
+
+        elseif name == "AUTO RESTOCK" then
+
+            if value then
+                startAutoRestock()
+            else
+                stopAutoRestock()
+            end
+
+        end
+
+    end)
+
+end
+
+for index, name in ipairs(names) do
+
+    makeToggle(name, index)
+
+end
+
+StatusLabel = Instance.new("TextLabel")
+
+StatusLabel.Size = UDim2.new(1, -16, 0, 28)
+
+StatusLabel.Position = UDim2.new(0, 8, 1, -32)
+
+StatusLabel.BackgroundTransparency = 1
+
+StatusLabel.Text = "STATUS: READY"
+
+StatusLabel.TextColor3 = Color3.fromRGB(190, 195, 210)
+
+StatusLabel.TextSize = 10
+
+StatusLabel.Font = Enum.Font.Gotham
+
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+StatusLabel.TextWrapped = true
+
+StatusLabel.Parent = Main
+
+--DRAG
+
+local dragging = false
+
+local dragStart
+
+local startPosition
+
+local dragInput
+
+Header.InputBegan:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = true
+
+        dragStart = input.Position
+
+        startPosition = Main.Position
+
+        input.Changed:Connect(function()
+
+            if input.UserInputState == Enum.UserInputState.End then
+
+                dragging = false
+
+            end
+
+        end)
+
+    end
+
+end)
+
+Header.InputChanged:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        dragInput = input
+
+    end
+
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+    if dragging and input == dragInput then
+
+        local delta = input.Position - dragStart
+
+        Main.Position = UDim2.new(
+
+            startPosition.X.Scale,
+
+            startPosition.X.Offset + delta.X,
+
+            startPosition.Y.Scale,
+
+            startPosition.Y.Offset + delta.Y
+
+        )
+
+    end
+
+end)
+
+--MINIMIZE / DESTROY
+
+local minimized = false
+
+Minimize.MouseButton1Click:Connect(function()
+
+    minimized = not minimized
+
+    ButtonHolder.Visible = not minimized
+
+    StatusLabel.Visible = not minimized
+
+    Main.Size = minimized
+
+        and UDim2.fromOffset(260, 32)
+
+        or UDim2.fromOffset(260, 307)
+
+    Minimize.Text = minimized and "+" or "-"
+
+end)
+
+Destroy.MouseButton1Click:Connect(function()
+
+    Running = false
+
+    stopFest()
+
+    stopX7()
+
+    stopCombat()
+
+    stopSkill()
+
+    AutoDodge = false
+    stopAutoRestock()
+
+    if Gui then
+
+        Gui:Destroy()
+
+    end
+
+end)
+
+print("[AUTO FEST HUB] Loaded | 6 toggles | Auto Event Restock + Checkpoint TP")
