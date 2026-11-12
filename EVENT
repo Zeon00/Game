@@ -278,14 +278,14 @@ local function moveToPosition(position, isActive, label)
     if not Root or not Humanoid then return false end
 
     local oldSpeed = Humanoid.WalkSpeed
-    Humanoid.WalkSpeed = math.max(oldSpeed, 32)
+    Humanoid.WalkSpeed = 60
 
     local path = PathfindingService:CreatePath({
         AgentRadius = 2,
         AgentHeight = 5,
         AgentCanJump = true,
         AgentCanClimb = true,
-        WaypointSpacing = 8
+        WaypointSpacing = 15
     })
 
     local computed = false
@@ -334,7 +334,7 @@ local function moveToPosition(position, isActive, label)
 
         Humanoid:MoveTo(waypoint.Position)
 
-        local deadline = os.clock() + 8
+        local deadline = os.clock() + 3
         local reached = false
 
         while isActive() and os.clock() < deadline do
@@ -346,7 +346,7 @@ local function moveToPosition(position, isActive, label)
                 break
             end
 
-            task.wait(0.05)
+            task.wait(0.02)
         end
 
         if not reached then
