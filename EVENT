@@ -1,3 +1,4 @@
+
 --============================================================
 -- AUTO FEST HUB | 5 TOGGLE | STANDALONE
 -- 1. AUTO FEST
@@ -5,6 +6,11 @@
 -- 3. AUTO SKILL
 -- 4. AUTO DODGE
 -- 5. AUTO EVENT RESTOCK
+--
+-- FEST ENTER : COMBAT + SKILL + DODGE ON
+-- FEST LEAVE : COMBAT + SKILL + DODGE OFF
+-- NEXT FEST  : COMBAT + SKILL + DODGE ON AGAIN
+-- EVENT BUY  : INDEPENDENT, NOT AFFECTED BY FEST
 --============================================================
 
 local Players = game:GetService("Players")
@@ -278,8 +284,6 @@ local function buyAllEventItems(id)
             break
         end
 
-        -- LEWATI TITLE
-        -- Item.Once digunakan untuk item Title.
         if item.Once == nil and item.Key ~= nil then
             attempted += 1
 
@@ -323,7 +327,6 @@ local function startEventRestock()
     task.spawn(function()
         local previousSlot
 
-        -- TUNGGU SLOT PERTAMA TERBACA
         while eventAlive(id) and previousSlot == nil do
             previousSlot = getEventSlot()
 
@@ -750,6 +753,29 @@ local function stopSkill()
 end
 
 --============================================================
+-- FEST COMBAT CONTROL
+-- FEST ENTER = ON
+-- FEST LEAVE = OFF
+-- EVENT RESTOCK TIDAK DISENTUH
+--============================================================
+
+local function setFestCombat(enabled)
+    if enabled then
+        startCombat()
+        startSkill()
+        AutoDodge = true
+    else
+        stopCombat()
+        stopSkill()
+        AutoDodge = false
+    end
+
+    setToggle("SWING + HIT", enabled)
+    setToggle("AUTO SKILL", enabled)
+    setToggle("AUTO DODGE", enabled)
+end
+
+--============================================================
 -- AUTO DODGE
 --============================================================
 
@@ -1130,6 +1156,10 @@ local function runOneFest(id)
         return false
     end
 
+    -- FEST SUDAH DIMASUKI:
+    -- NYALAKAN SWING + HIT, SKILL, DODGE
+    setFestCombat(true)
+
     status("Mencari FloorGlow...")
 
     local floorGlow
@@ -1171,6 +1201,10 @@ local function runOneFest(id)
         return false
     end
 
+    -- LEAVE BERHASIL:
+    -- MATIKAN SWING + HIT, SKILL, DODGE
+    setFestCombat(false)
+
     task.wait(1)
 
     return true
@@ -1185,6 +1219,10 @@ local function stopFest()
     FestRunId += 1
 
     setToggle("AUTO FEST", false)
+
+    -- AUTO FEST DIMATIKAN MANUAL:
+    -- MATIKAN 3 TOGGLE COMBAT JUGA
+    setFestCombat(false)
 
     updateCharacter()
 
@@ -1212,20 +1250,29 @@ local function startFest()
                 return runOneFest(id)
             end)
 
-            if not success then
-                status("ERROR: " .. tostring(result))
+            if not alive(id) then
                 break
             end
 
-            if not result then break end
+            if not success then
+                status("ERROR: " .. tostring(result) .. " | Retry 5 detik")
+                task.wait(5)
 
-            task.wait(1)
+            elseif result then
+                status("Dungeon selesai | Menyiapkan FEST berikutnya...")
+                task.wait(1)
+
+            else
+                status("Putaran gagal | Mencoba ulang 5 detik...")
+                task.wait(5)
+            end
         end
 
         if FestRunId == id then
             AutoFest = false
             setToggle("AUTO FEST", false)
-            status("AUTO FEST selesai / berhenti.")
+            setFestCombat(false)
+            status("AUTO FEST berhenti.")
         end
     end)
 end
