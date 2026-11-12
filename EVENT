@@ -2799,6 +2799,7 @@ EclipsePriority = false
 
 -- KHUSUS: SELESAI ECLIPSE WORLD 1 -> TRAVEL WORLD 2 -> POSISI 1.
 -- Eclipse World 2 tidak mengubah posisi / alur dungeon.
+-- WORLD 1 -> TRAVEL WORLD 2 -> POSISI 1
 if targetWorld == 1 then
     status("Eclipse World 1 selesai! Travel ke World 2...")
 
@@ -2812,34 +2813,34 @@ if targetWorld == 1 then
     end
 
     if not alive() then break end
-
-    -- Tunggu sistem spawn World 2 selesai memindahkan karakter.
-    status("World 2 terdeteksi, menunggu spawn selesai...")
-    task.wait(2.5)
-    updateCharacter()
-
-    local WORLD2_POS1 = Vector3.new(
-        117.35093688964844, 4003.597900390625, 16.326902389526367
-    )
-
-    status("Spawn World 2 selesai! Menuju posisi 1...")
-
-    local moved = false
-    while alive() and not moved do
-        moved = teleportPosition(WORLD2_POS1)
-        if not moved then
-            updateCharacter()
-            task.wait(0.5)
-        end
-    end
-
-    if not alive() then break end
-    status("Berhasil di World 2 posisi 1")
 end
 
--- LANJUTKAN AUTO DUNGEON JIKA SEBELUMNYA AKTIF.
--- Untuk Eclipse World 1, bagian ini berjalan setelah tiba di World 2 posisi 1.
--- Untuk Eclipse World 2, tidak ada travel / teleport tambahan.
+-- WORLD 1 maupun WORLD 2: TUNGGU SPAWN LALU TP POSISI 1
+status("Menunggu spawn selesai...")
+task.wait(2)
+updateCharacter()
+
+local WORLD2_POS1 = Vector3.new(
+    117.35093688964844,
+    4003.597900390625,
+    16.326902389526367
+)
+
+status("Menuju posisi 1...")
+local moved = false
+
+while alive() and not moved do
+    moved = teleportPosition(WORLD2_POS1)
+    if not moved then
+        updateCharacter()
+        task.wait(0.5)
+    end
+end
+
+if not alive() then break end
+status("Berhasil di posisi 1")
+
+-- LANJUTKAN AUTO DUNGEON JIKA SEBELUMNYA AKTIF
 if ResumeDungeonAfterEclipse and alive() and not AutoDungeon then
     ResumeDungeonAfterEclipse = false
     task.wait(1)
