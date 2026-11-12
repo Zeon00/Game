@@ -1,28 +1,21 @@
-
 --============================================================
 -- AUTO FEST HUB | 5 TOGGLE | STANDALONE
 -- 1. AUTO FEST
 -- 2. SWING + HIT
--- 3. HOLD LEFT CLICK
--- 4. AUTO SKILL
--- 5. AUTO DODGE RING + WEDGE/FAN
+-- 3. AUTO SKILL
+-- 4. AUTO DODGE
+-- 5. AUTO EVENT RESTOCK
 --============================================================
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local PathfindingService = game:GetService("PathfindingService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
 local Player = Players.LocalPlayer
 
---============================================================
 -- CONFIG
---============================================================
-
 local POS1 = Vector3.new(204.60000610351562, 3.19801926612854, 31.600004196166992)
 local POS2 = Vector3.new(211.99227905273438, 3.244025230407715, 32.36494827270508)
 
@@ -34,14 +27,39 @@ local SKILLS = {"Q", "E", "R", "F"}
 local SWING_DELAY = 0.05
 local SKILL_DELAY = 0.5
 
-local BEACON_DISTANCE = 12
-local BEACON_CHANGE_DISTANCE = 5
-local BEACON_MOVE_INTERVAL = 1
+-- EVENT SHOP
+local EVENT_SHOP_POS = Vector3.new(
+    177.60000610351562,
+    5.199999809265137,
+    7.200004577636719
+)
 
---============================================================
+local EVENT_CHECK_INTERVAL = 1
+
+-- FLOOR GLOW / CHECKPOINT
+local BLOCK_CHECK = Vector3.new(
+    -7200.111328125,
+    437.9979553222656,
+    -1464.1864013671875
+)
+
+local BLOCK_TP = Vector3.new(
+    -7200.2578125,
+    437.99798583984375,
+    -1473.457763671875
+)
+
+local FLOOR_GLOW_POS = Vector3.new(
+    -7200,
+    452.200012,
+    -1624.69995
+)
+
+local BLOCK_RADIUS = 5
+local BLOCK_TP_VERIFY_RADIUS = 3
+local FLOOR_GLOW_RADIUS = 3
+
 -- REMOTES
---============================================================
-
 local SwordShared = ReplicatedStorage:WaitForChild("SwordShared")
 local Remotes = SwordShared:WaitForChild("Remotes")
 
@@ -49,18 +67,33 @@ local SwingRemote = Remotes:WaitForChild("Swing")
 local HitRemote = Remotes:WaitForChild("Hit")
 local RequestRemote = Remotes:WaitForChild("Request")
 
---============================================================
--- STATE
---============================================================
+-- EVENT KIT
+local EventKit
+local EventKitModule = SwordShared:WaitForChild("EventKit", 10)
 
+if EventKitModule then
+    local ok, result = pcall(require, EventKitModule)
+    if ok then
+        EventKit = result
+    else
+        warn("[AUTO EVENT] Gagal require EventKit:", result)
+    end
+else
+    warn("[AUTO EVENT] Module EventKit tidak ditemukan")
+end
+
+-- STATE
 local Running = true
+
 local AutoFest = false
 local AutoCombat = false
-local HoldClick = false
 local AutoSkill = false
 local AutoDodge = false
+local AutoEventRestock = false
 
 local FestRunId = 0
+local EventRunId = 0
+
 local SwingIndex = 0
 local SkillIndex = 0
 
@@ -71,20 +104,17 @@ local Humanoid
 local Gui
 local Main
 local StatusLabel
-
 local ToggleButtons = {}
+
 local ToggleStates = {
     ["AUTO FEST"] = false,
     ["SWING + HIT"] = false,
-    ["HOLD LEFT CLICK"] = false,
     ["AUTO SKILL"] = false,
-    ["AUTO DODGE"] = false
+    ["AUTO DODGE"] = false,
+    ["AUTO EVENT RESTOCK"] = false
 }
 
---============================================================
 -- CHARACTER
---============================================================
-
 local function updateCharacter()
     Character = Player.Character
     Root = Character and Character:FindFirstChild("HumanoidRootPart")
@@ -108,10 +138,11 @@ local function alive(id)
     return Running and AutoFest and FestRunId == id
 end
 
---============================================================
--- TOGGLE DISPLAY
---============================================================
+local function eventAlive(id)
+    return Running and AutoEventRestock and EventRunId == id
+end
 
+-- TOGGLE DISPLAY
 local function setToggle(name, value)
     ToggleStates[name] = value
 
@@ -125,13 +156,229 @@ local function setToggle(name, value)
 end
 
 --============================================================
+-- AUTO EVENT RESTOCK
+--============================================================
+
+local function getCurrentEvent()
+    if not EventKit then return nil end
+
+    local ok, event = pcall(function()
+        return EventKit.latest()
+    end)
+
+    if ok then
+        return event
+    end
+
+    return nil
+end
+
+local function getEventSlot()
+    if not EventKit or not EventKit.Shop then
+        return nil
+    end
+
+    local event = getCurrentEvent()
+    if not event then return nil end
+
+    local ok, slot = pcall(function()
+        return EventKit.Shop.slot(
+            event,
+            Workspace:GetServerTimeNow()
+        )
+    end)
+
+    if ok then
+        return slot
+    end
+
+    return nil
+end
+
+local function getEventItems()
+    local event = getCurrentEvent()
+    if not event then return nil end
+
+    local shop = event.Shop
+    if not shop then return nil end
+
+    local items = shop.List
+    if type(items) ~= "table" then return nil end
+
+    return items
+end
+
+local function teleportToEventShop(id)
+    updateCharacter()
+
+    if not Root then
+        status("Menunggu karakter...")
+        return false
+    end
+
+    status("Teleport ke Event Shop...")
+
+    local success = pcall(function()
+        Root.CFrame = CFrame.new(EVENT_SHOP_POS)
+        Root.AssemblyLinearVelocity = Vector3.zero
+        Root.AssemblyAngularVelocity = Vector3.zero
+    end)
+
+    if not success then
+        return false
+    end
+
+    task.wait(0.35)
+
+    if not eventAlive(id) then
+        return false
+    end
+
+    updateCharacter()
+
+    if not Root then
+        return false
+    end
+
+    local distance = (Root.Position - EVENT_SHOP_POS).Magnitude
+
+    if distance > 8 then
+        status("Teleport ulang Event Shop...")
+
+        pcall(function()
+            Root.CFrame = CFrame.new(EVENT_SHOP_POS)
+            Root.AssemblyLinearVelocity = Vector3.zero
+            Root.AssemblyAngularVelocity = Vector3.zero
+        end)
+
+        task.wait(0.35)
+    end
+
+    return eventAlive(id)
+end
+
+local function buyAllEventItems(id)
+    if not eventAlive(id) then return end
+
+    local items = getEventItems()
+
+    if not items then
+        status("Daftar Event Shop belum tersedia")
+        return
+    end
+
+    local attempted = 0
+    local accepted = 0
+    local rejected = 0
+
+    status("Mengirim request pembelian...")
+
+    for _, item in ipairs(items) do
+        if not eventAlive(id) then
+            break
+        end
+
+        -- LEWATI TITLE
+        -- Item.Once digunakan untuk item Title.
+        if item.Once == nil and item.Key ~= nil then
+            attempted += 1
+
+            status("Request beli: " .. tostring(item.Key))
+
+            local ok, result = pcall(function()
+                return RequestRemote:InvokeServer(
+                    "EventBuy",
+                    item.Key
+                )
+            end)
+
+            if ok and result == true then
+                accepted += 1
+            else
+                rejected += 1
+            end
+        end
+    end
+
+    if eventAlive(id) then
+        status(
+            "Event selesai | Request: " .. attempted ..
+            " | Diterima: " .. accepted ..
+            " | Ditolak: " .. rejected
+        )
+    end
+end
+
+local function startEventRestock()
+    if AutoEventRestock then return end
+
+    AutoEventRestock = true
+    EventRunId += 1
+
+    local id = EventRunId
+
+    setToggle("AUTO EVENT RESTOCK", true)
+    status("Memulai monitor Event Restock...")
+
+    task.spawn(function()
+        local previousSlot
+
+        -- TUNGGU SLOT PERTAMA TERBACA
+        while eventAlive(id) and previousSlot == nil do
+            previousSlot = getEventSlot()
+
+            if previousSlot == nil then
+                status("Menunggu data Event Shop...")
+                task.wait(1)
+            end
+        end
+
+        if not eventAlive(id) then return end
+
+        status("Memantau restock | Slot: " .. tostring(previousSlot))
+
+        while eventAlive(id) do
+            task.wait(EVENT_CHECK_INTERVAL)
+
+            if not eventAlive(id) then
+                break
+            end
+
+            local currentSlot = getEventSlot()
+
+            if currentSlot ~= nil and currentSlot ~= previousSlot then
+                previousSlot = currentSlot
+
+                status("RESTOCK TERDETEKSI!")
+
+                if teleportToEventShop(id) then
+                    buyAllEventItems(id)
+                end
+            end
+        end
+
+        if EventRunId == id then
+            AutoEventRestock = false
+            setToggle("AUTO EVENT RESTOCK", false)
+            status("Monitor Event Restock berhenti.")
+        end
+    end)
+end
+
+local function stopEventRestock()
+    AutoEventRestock = false
+    EventRunId += 1
+
+    setToggle("AUTO EVENT RESTOCK", false)
+    status("AUTO EVENT RESTOCK dihentikan.")
+end
+
+--============================================================
 -- MOB HELPERS
 --============================================================
 
 local function getMobRoot(mob)
-    if not mob or not mob:IsA("Model") then
-        return nil
-    end
+    if not mob or not mob:IsA("Model") then return nil end
 
     return mob:FindFirstChild("HumanoidRootPart")
         or mob.PrimaryPart
@@ -198,16 +445,11 @@ local function getAllMobs()
             and not isDead(mob)
             and validOwner(mob)
             and getMobRoot(mob) then
-
             table.insert(result, mob)
         end
     end
 
     return result
-end
-
-local function getEnemyCount()
-    return #getAllMobs()
 end
 
 local function getNearestMob()
@@ -237,19 +479,19 @@ end
 -- OBJECT HELPERS
 --============================================================
 
-local function getObjectCFrame(object)
+local function getObjectPosition(object)
     if not object then return nil end
 
     if object:IsA("BasePart") then
-        return object.CFrame
+        return object.Position
     end
 
     if object:IsA("Model") then
-        return object:GetPivot()
+        return object:GetPivot().Position
     end
 
     local part = object:FindFirstChildWhichIsA("BasePart", true)
-    return part and part.CFrame or nil
+    return part and part.Position or nil
 end
 
 local function getDungeonObject(path)
@@ -268,413 +510,181 @@ local function getDungeonObject(path)
 end
 
 --============================================================
--- PATHFINDING
+-- DIRECT MOVETO
 --============================================================
 
-local function moveToPosition(position, isActive, label)
-    if not isActive() then return false end
+local function moveToPosition(position, isActive, label, stopDistance)
+    stopDistance = stopDistance or 5
 
     updateCharacter()
     if not Root or not Humanoid then return false end
 
     local oldSpeed = Humanoid.WalkSpeed
-    Humanoid.WalkSpeed = 60
+    Humanoid.WalkSpeed = math.max(oldSpeed, 16)
 
-    local path = PathfindingService:CreatePath({
-        AgentRadius = 2,
-        AgentHeight = 5,
-        AgentCanJump = true,
-        AgentCanClimb = true,
-        WaypointSpacing = 15
-    })
+    local arrived = false
+    local lastMove = 0
 
-    local computed = false
-
-    for attempt = 1, 10 do
-        if not isActive() then
-            Humanoid.WalkSpeed = oldSpeed
-            return false
-        end
-
+    while isActive() do
         updateCharacter()
-        if not Root then break end
 
-        local ok = pcall(function()
-            path:ComputeAsync(Root.Position, position)
-        end)
-
-        if ok and path.Status == Enum.PathStatus.Success then
-            computed = true
+        if not Root or not Humanoid or Humanoid.Health <= 0 then
             break
         end
 
-        status(label .. " | Path retry " .. attempt)
-        task.wait(0.2)
-    end
+        local distance = (Root.Position - position).Magnitude
 
-    if not computed then
-        updateCharacter()
-        if Humanoid then Humanoid.WalkSpeed = oldSpeed end
-        return false
-    end
-
-    for _, waypoint in ipairs(path:GetWaypoints()) do
-        if not isActive() then
-            updateCharacter()
-            if Humanoid then Humanoid.WalkSpeed = oldSpeed end
-            return false
+        if distance <= stopDistance then
+            arrived = true
+            break
         end
 
-        updateCharacter()
-        if not Root or not Humanoid then break end
-
-        if waypoint.Action == Enum.PathWaypointAction.Jump then
-            Humanoid.Jump = true
+        if os.clock() - lastMove >= 1 then
+            Humanoid:MoveTo(position)
+            lastMove = os.clock()
         end
 
-        Humanoid:MoveTo(waypoint.Position)
-
-        local deadline = os.clock() + 3
-        local reached = false
-
-        while isActive() and os.clock() < deadline do
-            updateCharacter()
-            if not Root then break end
-
-            if (Root.Position - waypoint.Position).Magnitude <= 3 then
-                reached = true
-                break
-            end
-
-            task.wait(0.02)
-        end
-
-        if not reached then
-            updateCharacter()
-            if Humanoid then
-                Humanoid.WalkSpeed = oldSpeed
-            end
-            return false
-        end
+        status(label .. " | " .. math.floor(distance) .. " studs")
+        task.wait(0.12)
     end
 
     updateCharacter()
 
-    local arrived = Root
-        and (Root.Position - position).Magnitude <= 7
-
     if Humanoid then
+        Humanoid:MoveTo(Root and Root.Position or position)
         Humanoid.WalkSpeed = oldSpeed
     end
 
     return arrived
 end
 
-local function moveToObject(object, isActive, label)
-    local cf = getObjectCFrame(object)
-    if not cf then return false end
-
-    return moveToPosition(cf.Position, isActive, label)
-end
-
 --============================================================
--- MONSTER BEACON
--- HANYA DIPROSES KALAU OBJEKNYA SUDAH MUNCUL
+-- FLOOR GLOW
 --============================================================
 
-local function findMonsterBeacon()
-    local dungeon = getDungeonObject({})
+local function moveToFloorGlow(id)
+    updateCharacter()
+    if not Root or not Humanoid then return false end
 
-    if not dungeon then return nil end
+    local oldSpeed = Humanoid.WalkSpeed
+    Humanoid.WalkSpeed = math.max(oldSpeed, 16)
 
-    for _, object in ipairs(dungeon:GetDescendants()) do
-        if string.lower(object.Name):find("monsterbeacon", 1, true)
-            and getObjectCFrame(object) then
-            return object
+    local arrived = false
+    local lastMove = 0
+    local blockPassed = false
+
+    while alive(id) do
+        updateCharacter()
+
+        if not Root or not Humanoid or Humanoid.Health <= 0 then
+            task.wait(0.2)
+            continue
         end
+
+        if not blockPassed then
+            local blockDistance = (Root.Position - BLOCK_CHECK).Magnitude
+
+            if blockDistance > BLOCK_RADIUS then
+                if os.clock() - lastMove >= 0.5 then
+                    Humanoid:MoveTo(BLOCK_CHECK)
+                    lastMove = os.clock()
+                end
+
+                status("Menuju penghalang | " .. math.floor(blockDistance) .. " studs")
+                task.wait(0.1)
+                continue
+            end
+
+            status("Penghalang terdeteksi | Teleport...")
+
+            Humanoid:MoveTo(Root.Position)
+
+            local teleportSuccess = false
+
+            while alive(id) and not teleportSuccess do
+                updateCharacter()
+
+                if not Root or not Humanoid then
+                    task.wait(0.2)
+                    continue
+                end
+
+                pcall(function()
+                    Root.CFrame = CFrame.new(BLOCK_TP)
+                    Root.AssemblyLinearVelocity = Vector3.zero
+                    Root.AssemblyAngularVelocity = Vector3.zero
+                end)
+
+                task.wait(0.2)
+
+                updateCharacter()
+
+                if Root then
+                    local verifyDistance = (Root.Position - BLOCK_TP).Magnitude
+
+                    if verifyDistance <= BLOCK_TP_VERIFY_RADIUS then
+                        teleportSuccess = true
+                        blockPassed = true
+                        lastMove = 0
+                        status("Teleport berhasil | Lanjut lari")
+                    else
+                        status("Teleport ulang | " .. math.floor(verifyDistance) .. " studs")
+                    end
+                end
+
+                task.wait(0.15)
+            end
+
+            if not alive(id) then
+                break
+            end
+        end
+
+        local floorDistance = (Root.Position - FLOOR_GLOW_POS).Magnitude
+
+        if floorDistance <= FLOOR_GLOW_RADIUS then
+            arrived = true
+            break
+        end
+
+        if os.clock() - lastMove >= 0.5 then
+            Humanoid:MoveTo(FLOOR_GLOW_POS)
+            lastMove = os.clock()
+        end
+
+        status("Menuju FloorGlow | " .. math.floor(floorDistance) .. " studs")
+        task.wait(0.12)
     end
-
-    return nil
-end
-
-local lastBeacon = nil
-local lastBeaconPosition = nil
-local lastBeaconMoveTime = 0
-
-local function handleMonsterBeacon(id)
-    if not alive(id) then return false end
-
-    -- Jangan mencari atau menunggu beacon sebelum beacon benar-benar ada.
-    local beacon = findMonsterBeacon()
-    if not beacon then return false end
-
-    local cf = getObjectCFrame(beacon)
-    if not cf then return false end
 
     updateCharacter()
-    if not Root then return false end
 
-    local position = cf.Position
-
-    local changed = beacon ~= lastBeacon
-
-    if lastBeaconPosition
-        and (position - lastBeaconPosition).Magnitude > BEACON_CHANGE_DISTANCE then
-        changed = true
+    if Humanoid then
+        Humanoid:MoveTo(Root and Root.Position or FLOOR_GLOW_POS)
+        Humanoid.WalkSpeed = oldSpeed
     end
 
-    if changed then
-        lastBeacon = beacon
-        lastBeaconPosition = position
-    end
+    return arrived
+end
 
-    local distance = (Root.Position - position).Magnitude
-
-    if distance <= BEACON_DISTANCE then
+local function clearDungeon(id, floorGlow)
+    if not floorGlow then
+        status("FloorGlow belum ditemukan!")
         return false
     end
 
-    if os.clock() - lastBeaconMoveTime < BEACON_MOVE_INTERVAL then
-        return true
+    status("Menuju checkpoint dan FloorGlow...")
+
+    local reached = moveToFloorGlow(id)
+
+    if reached then
+        status("FloorGlow tercapai!")
     end
 
-    lastBeaconMoveTime = os.clock()
-
-    status("Mob tertinggal | MonsterBeacon ditemukan | Pathfinding...")
-
-    moveToObject(
-        beacon,
-        function()
-            return alive(id) and beacon.Parent ~= nil
-        end,
-        "MonsterBeacon"
-    )
-
-    local newCF = getObjectCFrame(beacon)
-
-    if newCF then
-        lastBeacon = beacon
-        lastBeaconPosition = newCF.Position
-    end
-
-    return true
+    return reached
 end
 
 --============================================================
--- DUNGEON PROGRESS
---============================================================
-
-local function getProgressText()
-    local playerGui = Player:FindFirstChild("PlayerGui")
-    local gameUI = playerGui and playerGui:FindFirstChild("GameUI")
-    local bar = gameUI and gameUI:FindFirstChild("DungeonBar")
-    local progress = bar and bar:FindFirstChild("Progress")
-    local textFolder = progress and progress:FindFirstChild("Text")
-
-    if not textFolder then
-        return "", ""
-    end
-
-    local valueObject = textFolder:FindFirstChild("Value")
-    local captionObject = textFolder:FindFirstChild("Caption")
-
-    local value = valueObject and valueObject.Text or ""
-    local caption = captionObject and captionObject.Text or ""
-
-    return string.upper(value), string.upper(caption)
-end
-
-local function isBossOpen()
-    local value, caption = getProgressText()
-
-    value = value:match("^%s*(.-)%s*$")
-    caption = caption:match("^%s*(.-)%s*$")
-
-    return value == "BOSS" and caption == "OPEN!"
-end
-
---============================================================
--- ROAM OUTER POINTERS
---============================================================
-
-local function getRoamMarkers()
-    local markers = getDungeonObject({"Markers"})
-    local result = {}
-
-    if not markers then return result end
-
-    for _, object in ipairs(markers:GetChildren()) do
-        local number = object.Name:match("^Roam_Outer_(%d+)$")
-
-        if number and getObjectCFrame(object) then
-            table.insert(result, {
-                object = object,
-                index = tonumber(number)
-            })
-        end
-    end
-
-    table.sort(result, function(a, b)
-        return a.index < b.index
-    end)
-
-    return result
-end
-
---============================================================
--- FEST CLEAR LOOP
--- MOB DULU -> BEACON JIKA SUDAH MUNCUL
---============================================================
-
-local function clearDungeon(id)
-    local markerIndex = 1
-    local emptyStart = nil
-    local retryAt = 0
-
-    while alive(id) do
-        if isBossOpen() then
-            status("OPEN! | BOSS")
-            return true
-        end
-
-        local mobs = getAllMobs()
-
-        if #mobs > 0 then
-            emptyStart = nil
-
-            -- Mob masih ada: tetap clear mob.
-            -- Beacon hanya ditangani jika memang sudah muncul.
-            local beaconHandled = handleMonsterBeacon(id)
-
-            if not alive(id) then return false end
-
-            if not beaconHandled then
-                local mob = getNearestMob()
-                local mobRoot = mob and getMobRoot(mob)
-
-                if mobRoot then
-                    updateCharacter()
-
-                    local distance = Root
-                        and (Root.Position - mobRoot.Position).Magnitude
-                        or math.huge
-
-                    if distance > 10 then
-                        status("Clear mob | Menuju " .. mob.Name)
-
-                        moveToPosition(
-                            mobRoot.Position,
-                            function()
-                                return alive(id)
-                                    and mob.Parent ~= nil
-                                    and not isDead(mob)
-                            end,
-                            "Mengejar mob"
-                        )
-                    else
-                        status("Mob dekat | Menunggu clear...")
-                        task.wait(0.2)
-                    end
-                end
-            end
-
-            task.wait(0.1)
-            continue
-        end
-
-        -- Tidak ada mob: konfirmasi kosong 2 detik.
-        emptyStart = emptyStart or os.clock()
-
-        if os.clock() - emptyStart < 2 then
-            status("Enemies kosong | Konfirmasi...")
-            task.wait(0.15)
-            continue
-        end
-
-        if isBossOpen() then
-            return true
-        end
-
-        local markers = getRoamMarkers()
-
-        if #markers == 0 then
-            status("Menunggu pointer Roam_Outer...")
-            task.wait(0.5)
-            continue
-        end
-
-        if markerIndex > #markers then
-            markerIndex = 1
-        end
-
-        local entry = markers[markerIndex]
-        local marker = entry.object
-        local cf = getObjectCFrame(marker)
-
-        if not cf then
-            markerIndex += 1
-            continue
-        end
-
-        updateCharacter()
-
-        local distance = Root
-            and (Root.Position - cf.Position).Magnitude
-            or math.huge
-
-        if distance <= 8 then
-            markerIndex += 1
-            emptyStart = nil
-            task.wait(0.5)
-            continue
-        end
-
-        if os.clock() >= retryAt then
-            status("Pointer Roam_Outer_" .. entry.index)
-
-            local moved = moveToObject(
-                marker,
-                function()
-                    return alive(id)
-                        and getEnemyCount() == 0
-                        and not isBossOpen()
-                end,
-                "Roam Outer"
-            )
-
-            if moved then
-                markerIndex += 1
-                emptyStart = nil
-            else
-                retryAt = os.clock() + 0.5
-            end
-        end
-
-        task.wait(0.15)
-    end
-
-    return false
-end
-
---============================================================
--- HOLD LEFT CLICK
---============================================================
-
-local function setLeftClick(value)
-    HoldClick = value
-    ToggleStates["HOLD LEFT CLICK"] = value
-
-    pcall(function()
-        VirtualInputManager:SendMouseButtonEvent(
-            0, 0, value, game, 0
-        )
-    end)
-
-    setToggle("HOLD LEFT CLICK", value)
-end
-
---============================================================
--- SWING + HIT LOOP
+-- SWING + HIT
 --============================================================
 
 local function startCombat()
@@ -707,7 +717,7 @@ local function stopCombat()
 end
 
 --============================================================
--- AUTO SKILL LOOP
+-- AUTO SKILL
 --============================================================
 
 local function startSkill()
@@ -740,12 +750,13 @@ local function stopSkill()
 end
 
 --============================================================
--- AUTO DODGE | RING + WEDGE/FAN
+-- AUTO DODGE
 --============================================================
 
 local DODGE = {
-    SCAN_INTERVAL = 0.03,
-    COOLDOWN = 0.15,
+    SCAN_INTERVAL = 0.08,
+    FX_REFRESH_INTERVAL = 0.3,
+    COOLDOWN = 0.2,
     TRIGGER_MARGIN = 14,
     SAFE_MARGIN = 6,
     SEARCH_DISTANCES = {16, 22, 28, 36, 45},
@@ -755,6 +766,9 @@ local DODGE = {
 }
 
 local lastDodge = 0
+local lastFXRefresh = 0
+local cachedRings = {}
+local cachedWedges = {}
 
 local function horizontalDistance(a, b)
     local x = a.X - b.X
@@ -763,6 +777,12 @@ local function horizontalDistance(a, b)
 end
 
 local function getDangerObjects()
+    if os.clock() - lastFXRefresh < DODGE.FX_REFRESH_INTERVAL then
+        return cachedRings, cachedWedges
+    end
+
+    lastFXRefresh = os.clock()
+
     local rings = {}
     local wedges = {}
 
@@ -783,6 +803,9 @@ local function getDangerObjects()
             end
         end
     end
+
+    cachedRings = rings
+    cachedWedges = wedges
 
     return rings, wedges
 end
@@ -834,7 +857,7 @@ end
 
 local function getGroundPosition(position)
     updateCharacter()
-    if not Root or not Character then return nil end
+    if not Root or not Character or not Humanoid then return nil end
 
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
@@ -847,8 +870,7 @@ local function getGroundPosition(position)
         params
     )
 
-    if not result then return nil end
-    if result.Normal.Y < 0.75 then return nil end
+    if not result or result.Normal.Y < 0.75 then return nil end
     if result.Material == Enum.Material.Water then return nil end
 
     local difference = result.Position.Y - Root.Position.Y
@@ -857,7 +879,6 @@ local function getGroundPosition(position)
         return nil
     end
 
-    -- Cek pijakan di sekeliling supaya tidak memilih bibir jurang.
     local radius = 3.5
 
     for _, offset in ipairs({
@@ -872,16 +893,13 @@ local function getGroundPosition(position)
             params
         )
 
-        if not side or side.Normal.Y < 0.75 then
-            return nil
-        end
+        if not side or side.Normal.Y < 0.75 then return nil end
 
         if math.abs(side.Position.Y - result.Position.Y) > 3.5 then
             return nil
         end
     end
 
-    -- Tolak titik dodge yang jalurnya terhalang tembok.
     local direction = result.Position - Root.Position
 
     local wall = Workspace:Raycast(
@@ -890,9 +908,7 @@ local function getGroundPosition(position)
         params
     )
 
-    if wall then
-        return nil
-    end
+    if wall then return nil end
 
     return result.Position + Vector3.new(
         0,
@@ -903,16 +919,18 @@ end
 
 local function runDodge()
     updateCharacter()
+
     if not Root or not Humanoid or Humanoid.Health <= 0 then return end
     if os.clock() - lastDodge < DODGE.COOLDOWN then return end
 
     local rings, wedges = getDangerObjects()
+
     if #rings == 0 and #wedges == 0 then return end
 
     local danger = false
 
     for _, ring in ipairs(rings) do
-        if insideRing(Root.Position, ring, DODGE.TRIGGER_MARGIN) then
+        if ring.Parent and insideRing(Root.Position, ring, DODGE.TRIGGER_MARGIN) then
             danger = true
             break
         end
@@ -920,7 +938,7 @@ local function runDodge()
 
     if not danger then
         for _, wedge in ipairs(wedges) do
-            if insideWedge(Root.Position, wedge, DODGE.TRIGGER_MARGIN) then
+            if wedge.Parent and insideWedge(Root.Position, wedge, DODGE.TRIGGER_MARGIN) then
                 danger = true
                 break
             end
@@ -943,7 +961,6 @@ local function runDodge()
 
             if ground and isSafePosition(ground, rings, wedges) then
                 local oldCFrame = Root.CFrame
-
                 lastDodge = os.clock()
 
                 pcall(function()
@@ -977,23 +994,43 @@ end)
 
 local function getBoss()
     local enemies = Workspace:FindFirstChild("Enemies")
-    return enemies and enemies:FindFirstChild(BOSS_NAME)
+    if not enemies then return nil end
+
+    return enemies:FindFirstChild(BOSS_NAME)
 end
 
-local function bossDead(boss)
-    if not boss or not boss.Parent then return true end
-    return isDead(boss)
+local function getBossHealth(boss)
+    if not boss then return nil end
+
+    local hum = boss:FindFirstChildOfClass("Humanoid")
+    if hum then
+        return hum.Health
+    end
+
+    local health = boss:FindFirstChild("Health")
+
+    if health and (health:IsA("NumberValue") or health:IsA("IntValue")) then
+        return health.Value
+    end
+
+    local attribute = boss:GetAttribute("Health")
+
+    if typeof(attribute) == "number" then
+        return attribute
+    end
+
+    return nil
 end
 
-local function waitAndFightBoss(id)
-    status("Menunggu The Parade Master...")
-
+local function waitBossDefeated(id)
     local boss
+
+    status("Menunggu The Parade Master...")
 
     while alive(id) do
         boss = getBoss()
 
-        if boss and not bossDead(boss) then
+        if boss and boss.Parent then
             break
         end
 
@@ -1002,36 +1039,70 @@ local function waitAndFightBoss(id)
 
     if not alive(id) then return false end
 
-    status("The Parade Master ditemukan!")
+    status("Boss ditemukan | Menunggu HP terbaca...")
 
-    while alive(id) and not bossDead(boss) do
-        -- Swing + Hit dan Auto Skill tetap mengikuti toggle masing-masing.
-        task.wait(0.15)
+    local confirmedAlive = false
+
+    while alive(id) do
+        if not boss or not boss.Parent then
+            boss = getBoss()
+        end
+
+        if boss and boss.Parent then
+            local hp = getBossHealth(boss)
+
+            if hp and hp > 0 then
+                confirmedAlive = true
+                break
+            end
+        end
+
+        task.wait(0.2)
     end
 
-    status("Boss kalah.")
-    return true
+    if not alive(id) or not confirmedAlive then
+        return false
+    end
+
+    status("Melawan The Parade Master...")
+
+    while alive(id) do
+        if not boss or not boss.Parent then
+            return true
+        end
+
+        local hp = getBossHealth(boss)
+
+        if hp ~= nil and hp <= 0 then
+            return true
+        end
+
+        task.wait(0.2)
+    end
+
+    return false
 end
 
 --============================================================
--- AUTO FEST CYCLE
+-- AUTO FEST
 --============================================================
 
 local function runOneFest(id)
     updateCharacter()
     if not Root then return false end
 
-    -- POS1 teleport satu kali per putaran.
     status("Teleport POS1...")
     Root.CFrame = CFrame.new(POS1 + Vector3.new(0, 3, 0))
 
     task.wait(0.3)
 
-    -- POS2 harus berjalan.
-    status("Walk POS2...")
+    if not alive(id) then return false end
+
+    status("Lari menuju POS2...")
+
     if not moveToPosition(POS2, function()
         return alive(id)
-    end, "POS2") then
+    end, "POS2", 5) then
         return false
     end
 
@@ -1039,11 +1110,10 @@ local function runOneFest(id)
 
     if not alive(id) then return false end
 
-    -- Masuk FEST.
     status("EnterDungeon FEST...")
 
-    local ok = pcall(function()
-        RequestRemote:InvokeServer(
+    local ok, result = pcall(function()
+        return RequestRemote:InvokeServer(
             "EnterDungeon",
             DUNGEON,
             DUNGEON_COUNT
@@ -1051,69 +1121,78 @@ local function runOneFest(id)
     end)
 
     if not ok then
-        status("EnterDungeon gagal.")
+        status("EnterDungeon error: " .. tostring(result))
         return false
     end
 
-    -- Hold click otomatis aktif ketika masuk dungeon.
-    setLeftClick(true)
+    if result == false then
+        status("EnterDungeon ditolak.")
+        return false
+    end
 
-    -- Tunggu BossDoor.
-    local bossDoor
+    status("Mencari FloorGlow...")
+
+    local floorGlow
 
     while alive(id) do
-        bossDoor = getDungeonObject({"BossDoor"})
+        local door = getDungeonObject({"BossDoor"})
+        floorGlow = door and door:FindFirstChild("FloorGlow")
 
-        if bossDoor then break end
-        task.wait(0.2)
+        if floorGlow then break end
+
+        task.wait(0.1)
     end
 
     if not alive(id) then return false end
 
-    -- Clear mob/pointer. Beacon baru dicari jika benar-benar muncul.
-    if not clearDungeon(id) then
+    if not clearDungeon(id, floorGlow) then
         return false
     end
 
-    -- FloorGlow.
-    local floorGlow = bossDoor:FindFirstChild("FloorGlow")
-
-    while alive(id) and not floorGlow do
-        floorGlow = bossDoor:FindFirstChild("FloorGlow")
-        task.wait(0.2)
-    end
-
-    if not alive(id) then return false end
-
-    status("Pathfinding FloorGlow...")
-
-    if not moveToObject(floorGlow, function()
-        return alive(id)
-    end, "FloorGlow") then
-        return false
-    end
-
-    task.wait(2)
-
-    if not waitAndFightBoss(id) then
-        return false
-    end
-
+    status("FloorGlow tercapai | Menunggu boss...")
     task.wait(2)
 
     if not alive(id) then return false end
 
-    status("LeaveDungeon...")
+    if not waitBossDefeated(id) then
+        return false
+    end
 
-    pcall(function()
+    if not alive(id) then return false end
+
+    status("Boss kalah | LeaveDungeon...")
+
+    local leaveOK, leaveError = pcall(function()
         RequestRemote:InvokeServer("LeaveDungeon")
     end)
 
-    -- Hold Left Click otomatis OFF setelah keluar.
-    setLeftClick(false)
+    if not leaveOK then
+        status("LeaveDungeon error: " .. tostring(leaveError))
+        return false
+    end
 
     task.wait(1)
+
     return true
+end
+
+--============================================================
+-- START / STOP FEST
+--============================================================
+
+local function stopFest()
+    AutoFest = false
+    FestRunId += 1
+
+    setToggle("AUTO FEST", false)
+
+    updateCharacter()
+
+    if Humanoid and Root then
+        Humanoid:MoveTo(Root.Position)
+    end
+
+    status("AUTO FEST dihentikan.")
 end
 
 local function startFest()
@@ -1123,44 +1202,32 @@ local function startFest()
     FestRunId += 1
 
     local id = FestRunId
+
     setToggle("AUTO FEST", true)
+    status("Memulai AUTO FEST...")
 
     task.spawn(function()
         while alive(id) do
-            local success = runOneFest(id)
+            local success, result = pcall(function()
+                return runOneFest(id)
+            end)
 
-            if not alive(id) then break end
-
-            if success then
-                status("FEST selesai | Mengulang...")
-                task.wait(0.5)
-            else
-                status("Run gagal | Retry...")
-                task.wait(1)
+            if not success then
+                status("ERROR: " .. tostring(result))
+                break
             end
+
+            if not result then break end
+
+            task.wait(1)
         end
 
         if FestRunId == id then
             AutoFest = false
             setToggle("AUTO FEST", false)
-            status("AUTO FEST OFF")
+            status("AUTO FEST selesai / berhenti.")
         end
     end)
-end
-
-local function stopFest()
-    AutoFest = false
-    FestRunId += 1
-
-    updateCharacter()
-
-    if Humanoid and Root then
-        Humanoid:MoveTo(Root.Position)
-    end
-
-    setLeftClick(false)
-    setToggle("AUTO FEST", false)
-    status("AUTO FEST OFF")
 end
 
 --============================================================
@@ -1186,8 +1253,8 @@ if not parentOK or not Gui.Parent then
 end
 
 Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(260, 270)
-Main.Position = UDim2.new(0.5, -130, 0.5, -135)
+Main.Size = UDim2.fromOffset(270, 270)
+Main.Position = UDim2.new(0.5, -135, 0.5, -135)
 Main.BackgroundColor3 = Color3.fromRGB(23, 25, 32)
 Main.BorderSizePixel = 0
 Main.Parent = Gui
@@ -1242,7 +1309,7 @@ Destroy.Parent = Header
 Instance.new("UICorner", Destroy).CornerRadius = UDim.new(0, 5)
 
 local ButtonHolder = Instance.new("Frame")
-ButtonHolder.Size = UDim2.new(1, -16, 0, 190)
+ButtonHolder.Size = UDim2.new(1, -16, 0, 185)
 ButtonHolder.Position = UDim2.fromOffset(8, 39)
 ButtonHolder.BackgroundTransparency = 1
 ButtonHolder.Parent = Main
@@ -1255,19 +1322,20 @@ layout.Parent = ButtonHolder
 local names = {
     "AUTO FEST",
     "SWING + HIT",
-    "HOLD LEFT CLICK",
     "AUTO SKILL",
-    "AUTO DODGE"
+    "AUTO DODGE",
+    "AUTO EVENT RESTOCK"
 }
 
 local function makeToggle(name, order)
     local button = Instance.new("TextButton")
+
     button.Name = name
     button.Size = UDim2.new(1, 0, 0, 32)
     button.BackgroundColor3 = Color3.fromRGB(125, 55, 55)
     button.Text = name .. " : OFF"
     button.TextColor3 = Color3.new(1, 1, 1)
-    button.TextSize = 12
+    button.TextSize = 11
     button.Font = Enum.Font.GothamBold
     button.LayoutOrder = order
     button.Parent = ButtonHolder
@@ -1280,22 +1348,40 @@ local function makeToggle(name, order)
         local value = not ToggleStates[name]
 
         if name == "AUTO FEST" then
-            if value then startFest() else stopFest() end
+            if value then
+                startFest()
+            else
+                stopFest()
+            end
 
         elseif name == "SWING + HIT" then
-            if value then startCombat() else stopCombat() end
+            if value then
+                startCombat()
+            else
+                stopCombat()
+            end
+
             setToggle(name, value)
 
-        elseif name == "HOLD LEFT CLICK" then
-            setLeftClick(value)
-
         elseif name == "AUTO SKILL" then
-            if value then startSkill() else stopSkill() end
+            if value then
+                startSkill()
+            else
+                stopSkill()
+            end
+
             setToggle(name, value)
 
         elseif name == "AUTO DODGE" then
             AutoDodge = value
             setToggle(name, value)
+
+        elseif name == "AUTO EVENT RESTOCK" then
+            if value then
+                startEventRestock()
+            else
+                stopEventRestock()
+            end
         end
     end)
 end
@@ -1344,6 +1430,7 @@ end)
 Header.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
+
         dragInput = input
     end
 end)
@@ -1374,8 +1461,8 @@ Minimize.MouseButton1Click:Connect(function()
     StatusLabel.Visible = not minimized
 
     Main.Size = minimized
-        and UDim2.fromOffset(260, 32)
-        or UDim2.fromOffset(260, 270)
+        and UDim2.fromOffset(270, 32)
+        or UDim2.fromOffset(270, 270)
 
     Minimize.Text = minimized and "+" or "-"
 end)
@@ -1386,12 +1473,14 @@ Destroy.MouseButton1Click:Connect(function()
     stopFest()
     stopCombat()
     stopSkill()
+    stopEventRestock()
+
     AutoDodge = false
-    setLeftClick(false)
+    setToggle("AUTO DODGE", false)
 
     if Gui then
         Gui:Destroy()
     end
 end)
 
-print("[AUTO FEST HUB] Loaded | 5 toggles")
+print("[AUTO FEST HUB] Loaded | 5 toggles | Event Restock enabled")
