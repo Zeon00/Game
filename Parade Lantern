@@ -137,6 +137,14 @@ local HitRemote = Remotes:WaitForChild("Hit")
 
 local RequestRemote = Remotes:WaitForChild("Request")
 
+local PlayerState = require(
+    SwordShared:WaitForChild("Client"):WaitForChild("PlayerState")
+)
+
+local AutoEclipse = false
+local EclipseRunId = 0
+local EclipseTarget = nil
+local EclipseResumeMode = nil
 --STATE
 
 local Running = true
@@ -1961,6 +1969,277 @@ local function stopX7()
 
 end
 
+
+--============================================================
+-- AUTO ECLIPSE | PRIORITY OVER FEST / X7
+-- FIND ATTRIBUTE Eclipse | DIRECT TP | COMBAT + SKILL + DODGE
+--============================================================
+
+local function getEclipseBeast()
+    local enemies = Workspace:FindFirstChild("Enemies")
+    if not enemies then return nil end
+
+    for _, mob in ipairs(enemies:GetChildren()) do
+        if mob:IsA("Model")
+            and mob:GetAttribute("Eclipse") == true
+            and not isDead(mob) then
+
+            local mobRoot = getMobRoot(mob)
+            if mobRoot then
+                return mob
+            end
+        end
+    end
+
+    return nil
+end
+
+local function teleportToEclipseBeast(mob)
+    updateCharacter()
+
+    if not Root or not mob or not mob.Parent then
+        return false
+    end
+
+    local mobRoot = getMobRoot(mob)
+    if not mobRoot then return false end
+
+    -- TP langsung ke dekat beast, menghadap beast.
+    local targetPosition =
+        mobRoot.Position + mobRoot.CFrame.LookVector * 5
+
+    Root.CFrame = CFrame.lookAt(
+        targetPosition,
+        mobRoot.Position
+    )
+
+    Root.AssemblyLinearVelocity = Vector3.zero
+    Root.AssemblyAngularVelocity = Vector3.zero
+
+    return true
+end
+
+local function eclipseAlive(id)
+    return Running
+        and AutoEclipse
+        and EclipseRunId == id
+        and not RestockPaused
+end
+
+local function startEclipse()
+    if AutoEclipse then return end
+
+    AutoEclipse = true
+    EclipseRunId += 1
+
+    local id = EclipseRunId
+
+    -- Simpan mode yang sedang aktif untuk dilanjutkan nanti.
+    EclipseResumeMode = nil
+
+    if AutoFest then
+        EclipseResumeMode = "FEST"
+        stopMode("FEST")
+    elseif AutoX7 then
+        EclipseResumeMode = "X7"
+        stopMode("X7")
+    end
+
+    setToggle("AUTO ECLIPSE", true)
+    status("AUTO ECLIPSE ON | Menunggu Eclipse...")
+
+    task.spawn(function()
+        while eclipseAlive(id) do
+            local eclipseDungeon =
+                Workspace:GetAttribute("EclipseDungeon")
+
+            local eclipseActive =
+                Workspace:GetAttribute("EclipseAlive") == true
+
+            if not eclipseDungeon or not eclipseActive then
+                status("Menunggu beast Eclipse muncul...")
+                task.wait(0.5)
+                continue
+            end
+
+            -- Jangan masuk jika sedang berada di dungeon lain.
+            local currentDungeon = Player:GetAttribute("Dungeon")
+
+            if currentDungeon and currentDungeon ~= eclipseDungeon then
+                status("Keluar dari dungeon sebelumnya...")
+                pcall(function()
+                    RequestRemote:InvokeServer("LeaveDungeon")
+                end)
+
+                repeat
+                    task.wait(0.2)
+                until not eclipseAlive(id)
+                    or not Player:GetAttribute("Dungeon")
+
+                continue
+            end
+
+            -- Masuk ke dungeon Eclipse.
+            if not Player:GetAttribute("Dungeon") then
+                status("Masuk Eclipse: " .. tostring(eclipseDungeon))
+
+                local enterOK, enterResult = pcall(function()
+                    return PlayerState.request(
+                        "EclipseEnter",
+                        eclipseDungeon
+                    )
+                end)
+
+                if not enterOK or enterResult == false then
+                    status("EclipseEnter gagal | Retry...")
+                    task.wait(1)
+                    continue
+                end
+
+                local enterDeadline = os.clock() + 20
+
+                while eclipseAlive(id)
+                    and os.clock() < enterDeadline
+                    and Player:GetAttribute("Dungeon") ~= eclipseDungeon do
+
+                    task.wait(0.2)
+                end
+            end
+
+            if not eclipseAlive(id) then break end
+
+            if Player:GetAttribute("Dungeon") ~= eclipseDungeon then
+                status("Belum masuk dungeon Eclipse | Retry...")
+                task.wait(1)
+                continue
+            end
+
+            -- Cari beast berdasarkan atribut Eclipse.
+            status("Mencari beast dengan atribut Eclipse...")
+
+            local beast = nil
+
+            while eclipseAlive(id)
+                and Player:GetAttribute("Dungeon") == eclipseDungeon do
+
+                beast = getEclipseBeast()
+
+                if beast then break end
+
+                task.wait(0.15)
+            end
+
+            if not eclipseAlive(id) then break end
+            if not beast then continue end
+
+            EclipseTarget = beast
+
+            -- TP langsung ke beast.
+            if not teleportToEclipseBeast(beast) then
+                status("Gagal TP ke beast | Mencoba lagi...")
+                task.wait(0.5)
+                continue
+            end
+
+            -- Aktifkan seluruh combat setelah TP.
+            startCombat()
+            startSkill()
+            setAutoDodge(true)
+
+            setToggle("SWING + HIT", true)
+            setToggle("AUTO SKILL", true)
+
+            status("ECLIPSE BEAST | COMBAT + SKILL + DODGE ON")
+
+            -- Pantau beast yang sama sampai mati/hilang.
+            while eclipseAlive(id)
+                and Player:GetAttribute("Dungeon") == eclipseDungeon
+                and beast.Parent
+                and not isDead(beast) do
+
+                -- Kalau karakter respawn, TP lagi ke beast.
+                updateCharacter()
+
+                if Root and not beast.Parent then
+                    break
+                end
+
+                task.wait(0.15)
+            end
+
+            if not eclipseAlive(id) then break end
+
+            status("Beast Eclipse kalah | Menunggu dungeon selesai...")
+            EclipseTarget = nil
+
+            -- Matikan dodge setelah beast kalah.
+            setAutoDodge(false)
+
+            -- Keluar dungeon Eclipse.
+            local leaveDeadline = os.clock() + 25
+
+            while eclipseAlive(id)
+                and Player:GetAttribute("Dungeon") == eclipseDungeon
+                and os.clock() < leaveDeadline do
+
+                pcall(function()
+                    RequestRemote:InvokeServer("LeaveDungeon")
+                end)
+
+                task.wait(1)
+            end
+
+            if Player:GetAttribute("Dungeon") == eclipseDungeon then
+                status("LeaveDungeon belum berhasil | Retry...")
+                task.wait(1)
+                continue
+            end
+
+            status("Eclipse selesai | Menunggu Eclipse berikutnya...")
+            task.wait(1)
+        end
+
+        -- Cleanup saat Auto Eclipse OFF.
+        EclipseTarget = nil
+        setAutoDodge(false)
+
+        AutoEclipse = false
+        setToggle("AUTO ECLIPSE", false)
+
+        -- Lanjutkan mode yang sebelumnya aktif.
+        local resume = EclipseResumeMode
+        EclipseResumeMode = nil
+
+        if Running and resume == "FEST" then
+            status("Eclipse OFF | Melanjutkan AUTO FEST...")
+            startMode("FEST")
+
+        elseif Running and resume == "X7" then
+            status("Eclipse OFF | Melanjutkan AUTO X7...")
+            startMode("X7")
+        else
+            status("AUTO ECLIPSE OFF")
+        end
+    end)
+end
+
+local function stopEclipse()
+    AutoEclipse = false
+    EclipseRunId += 1
+
+    EclipseTarget = nil
+    setAutoDodge(false)
+
+    -- Pastikan tidak tertinggal di dungeon Eclipse.
+    if Player:GetAttribute("Dungeon") then
+        pcall(function()
+            RequestRemote:InvokeServer("LeaveDungeon")
+        end)
+    end
+
+    setToggle("AUTO ECLIPSE", false)
+end
+
 --GUI
 
 pcall(function()
@@ -1993,7 +2272,7 @@ end
 
 Main = Instance.new("Frame")
 
-Main.Size = UDim2.fromOffset(260, 307)
+Main.Size = UDim2.fromOffset(260, 344)
 
 Main.Position = UDim2.new(0.5, -130, 0.5, -117)
 
@@ -2085,7 +2364,7 @@ Instance.new("UICorner", Destroy).CornerRadius = UDim.new(0, 5)
 
 local ButtonHolder = Instance.new("Frame")
 
-ButtonHolder.Size = UDim2.new(1, -16, 0, 222)
+ButtonHolder.Size = UDim2.new(1, -16, 0, 258)
 
 ButtonHolder.Position = UDim2.fromOffset(8, 39)
 
@@ -2106,6 +2385,8 @@ local names = {
     "AUTO FEST",
 
     "AUTO X7",
+
+    "AUTO ECLIPSE",
 
     "SWING + HIT",
 
@@ -2154,6 +2435,10 @@ local function makeToggle(name, order)
         elseif name == "AUTO X7" then
 
             if value then startMode("X7") else stopX7() end
+
+        elseif name == "AUTO ECLIPSE" then
+
+             if value then startEclipse() else stopEclipse() end
 
         elseif name == "SWING + HIT" then
 
@@ -2301,7 +2586,7 @@ Minimize.MouseButton1Click:Connect(function()
 
         and UDim2.fromOffset(260, 32)
 
-        or UDim2.fromOffset(260, 307)
+        or UDim2.fromOffset(260, 344)
 
     Minimize.Text = minimized and "+" or "-"
 
@@ -2319,6 +2604,8 @@ Destroy.MouseButton1Click:Connect(function()
 
     stopSkill()
 
+    stopEclipse()
+    
     AutoDodge = false
     stopAutoRestock()
 
