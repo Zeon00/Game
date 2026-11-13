@@ -291,37 +291,40 @@ local function getEventShopData()
     return nil
 end
 
+
 local function teleportToEventShopZone()
     updateCharacter()
 
     if not Root then return false end
 
-    local lobby = Workspace:FindFirstChild("Lobby")
-    local zones = lobby and lobby:FindFirstChild("Zones")
-    local zone = zones and zones:FindFirstChild("EventShopZone")
+    local lobby = Workspace:FindFirstChild("Lobby2")
+    local festival = lobby and lobby:FindFirstChild("Festival")
+    local pad = festival and festival:FindFirstChild("EventShopPad")
 
-    if not zone then
-        warn("[RESTOCK] EventShopZone tidak ditemukan")
+    if not pad then
+        warn("[RESTOCK] Lobby2.Festival.EventShopPad tidak ditemukan")
         return false
     end
 
-    local zoneCF
-    local zoneSize
+    local targetPosition
 
-    if zone:IsA("BasePart") then
-        zoneCF = zone.CFrame
-        zoneSize = zone.Size
-    elseif zone:IsA("Model") then
-        zoneCF = zone:GetPivot()
-        zoneSize = zone:GetExtentsSize()
+    if pad:IsA("BasePart") then
+        -- Tepat di atas EventShopPad.
+        targetPosition = pad.Position
+            + Vector3.new(0, pad.Size.Y / 2 + 3, 0)
+
+    elseif pad:IsA("Model") then
+        local cf, size = pad:GetBoundingBox()
+        targetPosition = cf.Position
+            + Vector3.new(0, size.Y / 2 + 3, 0)
+
     else
-        warn("[RESTOCK] EventShopZone bukan Part atau Model")
-        return false
-    end
+        local part = pad:FindFirstChildWhichIsA("BasePart", true)
+        if not part then return false end
 
-    -- Tempatkan karakter di atas bagian tengah zone.
-    local targetPosition =
-        zoneCF.Position + Vector3.new(0, zoneSize.Y / 2 + 3, 0)
+        targetPosition = part.Position
+            + Vector3.new(0, part.Size.Y / 2 + 3, 0)
+    end
 
     local oldCF = Root.CFrame
 
@@ -331,10 +334,11 @@ local function teleportToEventShopZone()
     Root.AssemblyLinearVelocity = Vector3.zero
     Root.AssemblyAngularVelocity = Vector3.zero
 
-    task.wait(0.15)
+    task.wait(0.2)
 
     return true
 end
+
 
 local function buyAllEventItems()
     local boughtCount = 0
