@@ -26,11 +26,11 @@ local AUTO_BUY = false
 local BUSY = false
 local RESTOCK_BUSY = false
 
-local CHECK_INTERVAL = 0.25
+local CHECK_INTERVAL = 0.15
 local BUY_DELAY = 0.65
 local FAIL_DELAY = 1.5
 
-local RESTOCK_TRIGGER = 1
+local RESTOCK_TRIGGER = 0
 local SHOP_WAIT_TIMEOUT = 15
 local BUY_TIMEOUT = 30
 
@@ -639,7 +639,6 @@ local function restockCycle(oldSlot)
     end
 
     RESTOCK_BUSY = true
-    Status.Text = "TELEPORTING TO SHOP..."
 
     local originalCFrame, originalCharacter = teleportToShop()
 
@@ -649,67 +648,85 @@ local function restockCycle(oldSlot)
         return
     end
 
-    Status.Text = "WAITING FOR NEW RESTOCK..."
+    Status.Text = "SHOP REACHED | BUYING ALL STOCK..."
 
-    local newData
-    local waitDeadline = os.clock() + SHOP_WAIT_TIMEOUT
+    local buyDeadline = os.clock() + BUY_TIMEOUT
+    local boughtAny = false
 
-    repeat
-        task.wait(0.1)
+    while RUNNING and AUTO_BUY and os.clock() < buyDeadline do
+        local ok, freshData = pcall(getData)
 
-        local ok, data = pcall(getData)
+        if not ok or not freshData then
+            task.wait(0.15)
+            continue
+        end
 
-        if ok and data and data.Slot ~= oldSlot then
-            newData = data
+        updateDisplay(freshData)
+
+        if not hasAffordableStock(freshData) then
             break
         end
-    until os.clock() >= waitDeadline or not RUNNING
 
-    if newData and RUNNING and AUTO_BUY then
-        Status.Text = "NEW STOCK DETECTED"
+        local tokens = tonumber(Player:GetAttribute("EvTokens"))
+            or tonumber(freshData.State.Tokens)
+            or 0
 
-        -- Reset attempts only for the new slot.
-        for key in pairs(LastAttempt) do
-            if string.sub(key, 1, #tostring(newData.Slot) + 1)
-                == tostring(newData.Slot) .. ":" then
-                LastAttempt[key] = nil
+        local selectedItem
+
+        for _, item in ipairs(CurrentItems) do
+            local left = ShopAPI.left(
+                freshData.Kit,
+                freshData.Buys,
+                item.Key,
+                freshData.Now
+            )
+
+            local price = tonumber(item.Price) or 0
+
+            if left > 0
+            and tokens >= price
+            and (tonumber(freshData.Stock[item.Key]) or 0) > 0 then
+                selectedItem = item
+                break
             end
         end
 
-        local buyDeadline = os.clock() + BUY_TIMEOUT
-
-        while RUNNING and AUTO_BUY
-        and os.clock() < buyDeadline do
-
-            local ok, freshData = pcall(getData)
-
-            if ok and freshData and freshData.Slot == newData.Slot then
-                newData = freshData
-                updateDisplay(newData)
-
-                if not hasAffordableStock(newData) then
-                    break
-                end
-
-                if not BUSY then
-                    attemptBuy(newData)
-                end
-            end
-
-            task.wait(0.15)
+        if not selectedItem then
+            break
         end
 
-        Status.Text = "RESTOCK BUY CYCLE FINISHED"
-        LastAttempt["Handled:" .. tostring(newData.Slot)] = os.clock()
-    else
-        Status.Text = "NEW RESTOCK NOT DETECTED"
+        local key = selectedItem.Key
+        Status.Text = "BUYING: " .. key
+
+        local success, result = pcall(function()
+            return Request:InvokeServer("EventBuy", key)
+        end)
+
+        if success and result ~= false then
+            boughtAny = true
+            Status.Text = "PURCHASE REQUESTED: " .. key
+        else
+            Status.Text = "BUY FAILED: " .. key
+
+            if not success then
+                warn("[Lantern AutoBuy]", result)
+            end
+
+            task.wait(FAIL_DELAY)
+        end
+
+        task.wait(BUY_DELAY)
     end
 
-    -- Return only if the same character is still present.
+    Status.Text = boughtAny
+        and "BUY ALL FINISHED | RETURNING..."
+        or "NO AFFORDABLE STOCK | RETURNING..."
+
     if RUNNING and Player.Character == originalCharacter then
         originalCharacter:PivotTo(originalCFrame)
     end
 
+    Status.Text = "RETURNED TO ORIGINAL POSITION"
     RESTOCK_BUSY = false
 end
 
@@ -756,18 +773,10 @@ task.spawn(function()
             end
 
             if AUTO_BUY and not RESTOCK_BUSY then
-                local remaining = data.NextTime - data.Now
-
-                if remaining <= RESTOCK_TRIGGER
-                and LastAttempt["Handled:" .. tostring(data.Slot)] == nil then
-
+                if hasAffordableStock(data) then
                     task.spawn(function()
                         restockCycle(data.Slot)
                     end)
-                elseif not RESTOCK_BUSY then
-                    -- Keep the original automatic buying behavior
-                    -- between restocks as well.
-                    attemptBuy(data)
                 end
             end
 
