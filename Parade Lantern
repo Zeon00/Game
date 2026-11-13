@@ -97,6 +97,8 @@ local EclipsePaused = false
 local EclipsePriority = false
 local EclipseInRun = false
 local EclipseTarget = nil
+local EclipseReturnAt = 0
+local EclipseLastMove = 0
 local EclipseSavedFest = false
 local EclipseSavedX7 = false
 local EclipseSavedCombat = false
@@ -603,13 +605,23 @@ local function startCombat()
                 SwingRemote:FireServer(SwingIndex)
             end)
 
-            local mobs = getAllMobs()
+            local mobs
 
-            if #mobs > 0 then
-                pcall(function()
-                    HitRemote:FireServer(SwingIndex, 1, mobs)
-                end)
-            end
+if EclipseInRun and EclipseTarget
+    and EclipseTarget.Parent
+    and not isDead(EclipseTarget) then
+
+    -- Eclipse hanya menyerang Umbra
+    mobs = {EclipseTarget}
+else
+    mobs = getAllMobs()
+end
+
+if #mobs > 0 then
+    pcall(function()
+        HitRemote:FireServer(SwingIndex, 1, mobs)
+    end)
+end
 
             task.wait(SWING_DELAY)
         end
@@ -879,6 +891,9 @@ local function runDodge()
 
                     Root.AssemblyLinearVelocity = Vector3.zero
                     Root.AssemblyAngularVelocity = Vector3.zero
+                    if EclipseInRun then
+    EclipseReturnAt = os.clock() + 0.65
+end
                 end)
 
                 if IsGoingToFloorGlow then
@@ -893,10 +908,44 @@ local function runDodge()
     end
 end
 
+local function walkBackToUmbra()
+    if not EclipseInRun or not AutoDodge then return end
+    if os.clock() < EclipseReturnAt then return end
+    if os.clock() - EclipseLastMove < 0.25 then return end
+
+    local umbra = EclipseTarget
+
+    if not umbra or not umbra.Parent or isDead(umbra) then
+        return
+    end
+
+    updateCharacter()
+
+    if not Root or not Humanoid or Humanoid.Health <= 0 then
+        return
+    end
+
+    local mobRoot = getMobRoot(umbra)
+    if not mobRoot then return end
+
+    local distance = (Root.Position - mobRoot.Position).Magnitude
+
+    if distance > 8 then
+        EclipseLastMove = os.clock()
+
+        -- Berjalan kembali, bukan teleport
+        Humanoid:MoveTo(
+            (mobRoot.CFrame * CFrame.new(0, 0, 5)).Position
+        )
+
+        status("ECLIPSE | Kembali berjalan menuju Umbra...")
+    end
+end
 task.spawn(function()
     while Running do
         if AutoDodge then
             pcall(runDodge)
+            pcall(walkBackToUmbra)
         end
 
         task.wait(DODGE.SCAN_INTERVAL)
