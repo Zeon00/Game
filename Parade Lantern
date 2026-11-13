@@ -1223,93 +1223,100 @@ end
 local function pauseModesForEclipse()
     if EclipsePaused then return end
 
+    -- Simpan hanya mode dungeon yang sedang aktif.
     EclipseSavedFest = AutoFest
     EclipseSavedX7 = AutoX7
-    EclipseSavedCombat = AutoCombat
-    EclipseSavedSkill = AutoSkill
-    EclipseSavedDodge = AutoDodge
 
     EclipsePaused = true
     EclipsePriority = true
 
-    -- OFF-kan toggle dan batalkan loop FEST
+    -- Hentikan worker FEST/X7 yang sedang berjalan.
     if EclipseSavedFest then
         AutoFest = false
         FestRunId += 1
         setToggle("AUTO FEST", false)
     end
 
-    -- OFF-kan toggle dan batalkan loop X7
     if EclipseSavedX7 then
         AutoX7 = false
         X7RunId += 1
         setToggle("AUTO X7", false)
     end
 
+    -- MATIKAN SEMUA COMBAT SEBELUM REMOTE ECLIPSE.
     stopCombat()
     stopSkill()
     setAutoDodge(false)
 
+    setToggle("SWING + HIT", false)
+    setToggle("AUTO SKILL", false)
+    setToggle("AUTO DODGE", false)
+
+    -- Hentikan gerakan karakter.
     updateCharacter()
 
     if Humanoid and Root then
         Humanoid:MoveTo(Root.Position)
+        Root.AssemblyLinearVelocity = Vector3.zero
+        Root.AssemblyAngularVelocity = Vector3.zero
     end
 
-    status("ECLIPSE PRIORITY | FEST/X7 OFF sementara")
-end
+    status("ECLIPSE PRIORITY | FEST/X7 + SKILL + SWING + DODGE OFF")
+    end
 local function restoreModesAfterEclipse()
     if not EclipsePaused then return end
 
     local resumeFest = EclipseSavedFest
     local resumeX7 = EclipseSavedX7
 
+    -- Pastikan combat Eclipse benar-benar OFF.
+    stopCombat()
+    stopSkill()
+    setAutoDodge(false)
+
+    setToggle("SWING + HIT", false)
+    setToggle("AUTO SKILL", false)
+    setToggle("AUTO DODGE", false)
+
     EclipseTarget = nil
     CurrentDungeonTarget = nil
 
-    if EclipseSavedCombat then
-        startCombat()
-        setToggle("SWING + HIT", true)
-    else
-        stopCombat()
-        setToggle("SWING + HIT", false)
-    end
-
-    if EclipseSavedSkill then
-        startSkill()
-        setToggle("AUTO SKILL", true)
-    else
-        stopSkill()
-        setToggle("AUTO SKILL", false)
-    end
-
-    setAutoDodge(EclipseSavedDodge)
-
+    -- Lepaskan prioritas Eclipse.
     EclipsePaused = false
     EclipsePriority = false
+    EclipseInRun = false
 
     AutoFest = false
     AutoX7 = false
 
-    -- Mulai ulang loop dari awal, bukan melanjutkan loop lama
+    -- Restart hanya mode yang sebelumnya aktif.
     if resumeFest then
+        setToggle("AUTO FEST", false)
         setToggle("AUTO X7", false)
+
+        task.wait(0.2)
         startMode("FEST")
+
     elseif resumeX7 then
         setToggle("AUTO FEST", false)
+        setToggle("AUTO X7", false)
+
+        task.wait(0.2)
         startMode("X7")
+
     else
         setToggle("AUTO FEST", false)
         setToggle("AUTO X7", false)
     end
 
+    -- Bersihkan status penyimpanan.
     EclipseSavedFest = false
     EclipseSavedX7 = false
     EclipseSavedCombat = false
     EclipseSavedSkill = false
     EclipseSavedDodge = false
 
-    status("ECLIPSE SELESAI | Mode sebelumnya dimulai ulang")
+    status("ECLIPSE SELESAI | Combat OFF | Mode sebelumnya restart")
 end
 
 local function stopEclipse()
@@ -1717,10 +1724,10 @@ local function startEclipse()
             task.wait(2)
 
             local world2Position = Vector3.new(
-                -0.013201752677559853,
-                4014.997802734375,
-                -118.85517883300781
-            )
+    0,
+    4003.497802734375,
+    24.5
+)
 
             eclipseStatus("Menuju posisi 1 World 2...")
 
@@ -1738,9 +1745,16 @@ local function startEclipse()
             if not alive() then break end
 
             -- Karakter sudah berada di World 2 POS1
-eclipseStatus("World 2 POS1 tercapai | Menunggu posisi stabil...")
+eclipseStatus("Spawn World 2 tercapai | Menunggu 3 detik...")
+task.wait(3)
 
-task.wait(1.5)
+if not alive() then break end
+
+EclipseInRun = false
+restoreModesAfterEclipse()
+
+eclipseStatus("Selesai | FEST/X7 restart dari awal")
+task.wait(1)
 
 if not alive() then break end
 
