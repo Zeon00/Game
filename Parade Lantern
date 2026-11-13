@@ -112,7 +112,9 @@ local FestBlockPassed = false
 
 local FestRunId = 0
 local X7RunId = 0
-
+local ModeStopping = false
+local PendingMode = nil
+local ModeStopId = 0
 local SwingIndex = 0
 local SkillIndex = 0
 
@@ -1724,7 +1726,9 @@ local function startEclipse()
             task.wait(2)
 
             local world2Position = Vector3.new(
-    117.29739379882812, 4003.597900390625, 4.965570449829102
+    0,
+    4003.497802734375,
+    24.5
 )
 
             eclipseStatus("Menuju posisi 1 World 2...")
@@ -1971,13 +1975,11 @@ end
 local function stopMode(mode)
     if mode == "FEST" then
         AutoFest = false
-        FestRunId = FestRunId + 1
-
+        FestRunId += 1
         setToggle("AUTO FEST", false)
-    else
+    elseif mode == "X7" then
         AutoX7 = false
-        X7RunId = X7RunId + 1
-
+        X7RunId += 1
         setToggle("AUTO X7", false)
     end
 
@@ -2000,10 +2002,75 @@ local function stopMode(mode)
         Humanoid:MoveTo(Root.Position)
     end
 
-    status("AUTO " .. mode .. " dihentikan.")
+    if not EclipsePaused then
+        ModeStopping = true
+        ModeStopId += 1
+
+        local stopId = ModeStopId
+
+        status("AUTO " .. mode .. " OFF | Keluar dari dungeon...")
+
+        task.spawn(function()
+            if Player:GetAttribute("Dungeon") then
+                for attempt = 1, 8 do
+                    if not Running or ModeStopId ~= stopId then
+                        return
+                    end
+
+                    if not Player:GetAttribute("Dungeon") then
+                        break
+                    end
+
+                    pcall(function()
+                        RequestRemote:InvokeServer("LeaveDungeon")
+                    end)
+
+                    local deadline = os.clock() + 2
+
+                    while Running
+                        and ModeStopId == stopId
+                        and Player:GetAttribute("Dungeon")
+                        and os.clock() < deadline do
+
+                        task.wait(0.1)
+                    end
+                end
+            end
+
+            if ModeStopId == stopId then
+                ModeStopping = false
+                status("AUTO " .. mode .. " OFF | Siap mulai ulang dari POS1")
+
+                local pending = PendingMode
+                PendingMode = nil
+
+                if pending and Running then
+                    task.wait(0.2)
+                    startMode(pending)
+                end
+            end
+        end)
+    else
+        status("AUTO " .. mode .. " dihentikan.")
+    end
 end
 
 startMode = function(mode)
+    if ModeStopping then
+        PendingMode = mode
+
+        if mode == "FEST" then
+            setToggle("AUTO FEST", true)
+            setToggle("AUTO X7", false)
+        else
+            setToggle("AUTO X7", true)
+            setToggle("AUTO FEST", false)
+        end
+
+        status("Menunggu keluar dungeon | " .. mode .. " akan mulai dari POS1")
+        return
+    end
+
     if EclipsePaused or EclipsePriority then
         status("ECLIPSE sedang prioritas | FEST/X7 menunggu")
         return
