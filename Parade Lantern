@@ -54,9 +54,9 @@ local MODE_CONFIG = {
 
     FEST = {
 
-        POS1 = Vector3.new(204.60000610351562, 3.19801926612854, 31.600004196166992),
+        POS1 = Vector3.new(-13.916377067565918, 3998.997802734375, 196.00872802734375),
 
-        POS2 = Vector3.new(211.99227905273438, 3.244025230407715, 32.36494827270508),
+        POS2 = Vector3.new(-13.84536361694336, 3999.22802734375, 204.06658935546875),
 
         DUNGEON = "FEST",
 
@@ -174,6 +174,8 @@ local Humanoid
 local Gui
 local RestockPaused = false
 local RestockLeaving = false
+local pauseDungeonForRestock
+local interruptedRestockKey = nil
 local Main
 
 local StatusLabel
@@ -260,106 +262,10 @@ local function setToggle(name, value)
 
 end
 
---AUTO EVENT RESTOCK
-local function getEventShopData()
-    if not EventKit then return nil end
-
-    local ok, eventData = pcall(function()
-        return EventKit.latest()
-    end)
-
-    if ok and type(eventData) == "table" and eventData.Shop and eventData.Shop.List then
-        return eventData
-    end
-
-    return nil
-end
-
-local function teleportToRestockSpot()
-    updateCharacter()
-    if not Root then return false end
-
-    local oldCF = Root.CFrame
-    Root.CFrame =
-        CFrame.new(RESTOCK_TELEPORT_POS)
-        * (oldCF - oldCF.Position)
-
-    Root.AssemblyLinearVelocity = Vector3.zero
-    Root.AssemblyAngularVelocity = Vector3.zero
-    return true
-end
-
-local function tryBuyEventItem(eventData, item, slotId, isTitle)
-    local now = Workspace:GetServerTimeNow()
-
-    local stateOK, stateData = pcall(function()
-        return EventKit.state(Player)
-    end)
-
-    if not stateOK or type(stateData) ~= "table" then
-        return false, "Gagal membaca state event"
-    end
-
-    local buys = stateData.Buys or {}
-    local ownedTitles = {}
-
-    if isTitle and Titles and type(Titles.owned) == "function" then
-        local ownedOK, owned = pcall(function()
-            return Titles.owned(Player)
-        end)
-
-        if ownedOK and type(owned) == "table" then
-            ownedTitles = owned
-        end
-    end
-
-    if isTitle and item.Once and ownedTitles[item.Once] == true then
-        return false, "Title sudah dimiliki"
-    end
-
-    local leftOK, left = pcall(function()
-        return EventKit.Shop.left(eventData, buys, item.Key, now)
-    end)
-
-    if not leftOK or type(left) ~= "number" or left < 1 then
-        return false, "Batas pembelian habis"
-    end
-
-    if item.Stock then
-        local stockOK, stockTable = pcall(function()
-            return EventKit.Shop.stock(eventData, slotId)
-        end)
-
-        if not stockOK or type(stockTable) ~= "table" then
-            return false, "Gagal membaca stock"
-        end
-
-        local totalStock = tonumber(stockTable[item.Key]) or 0
-        local boughtThisSlot = 0
-
-        if buys.Slot == slotId and type(buys.Items) == "table" then
-            boughtThisSlot = tonumber(buys.Items[item.Key]) or 0
-        end
-
-        if totalStock - boughtThisSlot < 1 then
-            return false, "Stock kosong"
-        end
-    end
-
-    local requestOK, bought, response = pcall(function()
-        return RequestRemote:InvokeServer("EventBuy", item.Key)
-    end)
-
-    if not requestOK then
-        return false, tostring(bought)
-    end
-
-    if bought == false then
-        return false, tostring(response or "Pembelian ditolak")
-    end
-
-    return true, response
-end
+--============================================================
+-- AUTO EVENT RESTOCK | TELEPORT EVENT SHOP ZONE
+-- BUY 6 ITEMS | NO ARTIFICIAL DELAY
+--============================================================
 
 local EVENT_BUY_KEYS = {
     "PowerPotion",
@@ -370,225 +276,197 @@ local EVENT_BUY_KEYS = {
     "GemStash"
 }
 
+local function getEventShopData()
+    if not EventKit then return nil end
+
+    local ok, data = pcall(function()
+        return EventKit.latest()
+    end)
+
+    if ok and type(data) == "table"
+        and data.Shop and data.Shop.List then
+        return data
+    end
+
+    return nil
+end
+
+local function teleportToEventShopZone()
+    updateCharacter()
+
+    if not Root then return false end
+
+    local lobby = Workspace:FindFirstChild("Lobby")
+    local zones = lobby and lobby:FindFirstChild("Zones")
+    local zone = zones and zones:FindFirstChild("EventShopZone")
+
+    if not zone then
+        warn("[RESTOCK] EventShopZone tidak ditemukan")
+        return false
+    end
+
+    local zoneCF
+    local zoneSize
+
+    if zone:IsA("BasePart") then
+        zoneCF = zone.CFrame
+        zoneSize = zone.Size
+    elseif zone:IsA("Model") then
+        zoneCF = zone:GetPivot()
+        zoneSize = zone:GetExtentsSize()
+    else
+        warn("[RESTOCK] EventShopZone bukan Part atau Model")
+        return false
+    end
+
+    -- Tempatkan karakter di atas bagian tengah zone.
+    local targetPosition =
+        zoneCF.Position + Vector3.new(0, zoneSize.Y / 2 + 3, 0)
+
+    local oldCF = Root.CFrame
+
+    Root.CFrame =
+        CFrame.new(targetPosition) * (oldCF - oldCF.Position)
+
+    Root.AssemblyLinearVelocity = Vector3.zero
+    Root.AssemblyAngularVelocity = Vector3.zero
+
+    task.wait(0.15)
+
+    return true
+end
+
 local function buyAllEventItems()
     local boughtCount = 0
-    local skippedCount = 0
+    local failedCount = 0
 
     for _, itemKey in ipairs(EVENT_BUY_KEYS) do
-        local success, result = pcall(function()
+        local ok, result, response = pcall(function()
             return RequestRemote:InvokeServer("EventBuy", itemKey)
         end)
 
-        if success and result ~= false then
-            boughtCount = boughtCount + 1
-            print("[RESTOCK] BERHASIL:", itemKey, result)
+        if ok and result ~= false then
+            boughtCount += 1
+            print("[RESTOCK] REQUEST:", itemKey, result)
         else
-            skippedCount = skippedCount + 1
-            warn("[RESTOCK] GAGAL:", itemKey, result)
+            failedCount += 1
+            warn("[RESTOCK] GAGAL:", itemKey, result or response)
         end
     end
 
     status(string.format(
-        "RESTOCK SELESAI | Berhasil: %d/6 | Skip: %d",
+        "RESTOCK | Request: %d/6 | Gagal: %d",
         boughtCount,
-        skippedCount
+        failedCount
     ))
 end
+
 
 local function startAutoRestock()
     if AutoRestock then return end
 
-    if not EventKit or not RequestRemote then
-        status("AUTO RESTOCK gagal | EventKit/Request tidak ditemukan")
-        setToggle("AUTO RESTOCK", false)
-        return
-    end
-
     AutoRestock = true
-    RestockRunId = RestockRunId + 1
+    RestockRunId += 1
+
     local runId = RestockRunId
+    local preparedRestock = nil
+    local attemptedRestock = nil
+
+    interruptedRestockKey = nil
 
     setToggle("AUTO RESTOCK", true)
-    status("AUTO RESTOCK ON | Memantau timer restock...")
+    status("AUTO RESTOCK ON | Memantau timer...")
 
     task.spawn(function()
-        local preparedRestock = nil
-        local pausedForThisRestock = false
-
         while Running and AutoRestock and RestockRunId == runId do
             local eventData = getEventShopData()
 
-            if not eventData then
-                status("AUTO RESTOCK | Menunggu Event Shop...")
-                task.wait(1)
-                continue
-            end
-
-            local now = Workspace:GetServerTimeNow()
-            local slotId, _, nextRestock = EventKit.Shop.slot(eventData, now)
-
-            if type(nextRestock) ~= "number" then
-                status("AUTO RESTOCK | Timer tidak terbaca")
-                task.wait(1)
-                continue
-            end
-
-            local remaining = nextRestock - now
-            local restockKey = tostring(slotId) .. ":" .. tostring(nextRestock)
-
-            if remaining <= RESTOCK_PREPARE_SECONDS
-                and remaining > 0
-                and preparedRestock ~= restockKey then
-
-                preparedRestock = restockKey
-                pausedForThisRestock = true
-
-                local leaveOK = pauseDungeonForRestock()
-
-                if not leaveOK then
-                    preparedRestock = nil
-                    task.wait(0.5)
-                    continue
-                end
-            end
-
-            if remaining <= 0 then
-                local oldSlot = slotId
-                local oldRestock = nextRestock
-                local changed = false
-
-                status("RESTOCK | Menunggu slot berganti...")
-
-                while Running and AutoRestock and RestockRunId == runId do
-                    task.wait(0.05)
-
-                    local freshEvent = getEventShopData()
-                    if not freshEvent then continue end
-
-                    local freshNow = Workspace:GetServerTimeNow()
-                    local freshSlot, _, freshNext =
-                        EventKit.Shop.slot(freshEvent, freshNow)
-
-                    if freshSlot ~= oldSlot or freshNext ~= oldRestock then
-                        changed = true
-                        break
-                    end
-                end
-
-                if changed and Running and AutoRestock and RestockRunId == runId then
-                    status("RESTOCK BERGANTI | BORONG SEMUA ITEM...")
-                    buyAllEventItems()
-
-                    preparedRestock = nil
-
-                    if pausedForThisRestock then
-                        pausedForThisRestock = false
-                        resumeDungeonAfterRestock()
-                    end
-
-                    task.wait(0.5)
-                end
-            else
-                task.wait(0.1)
-            end
-        end
-    end)
-end
-
-local function resumeDungeonAfterRestock()
-    RestockPaused = false
-
-    if AutoFest or AutoX7 then
-        status("RESTOCK selesai | Melanjutkan dungeon dari POS1...")
-    else
-        status("RESTOCK selesai | Tidak ada mode dungeon aktif")
-    end
-end
-    AutoRestock = true
-    RestockRunId = RestockRunId + 1
-    local runId = RestockRunId
-
-    setToggle("AUTO RESTOCK", true)
-    status("AUTO RESTOCK ON | Memantau timer restock...")
-
-    task.spawn(function()
-        local preparedRestock = nil
-
-        while Running and AutoRestock and RestockRunId == runId do
-            local eventData = getEventShopData()
-
-            if not eventData then
-                status("AUTO RESTOCK | Menunggu Event Shop...")
-                task.wait(1)
-            else
+            if eventData then
                 local now = Workspace:GetServerTimeNow()
-                local slotId, _, nextRestock = EventKit.Shop.slot(eventData, now)
 
-                if type(nextRestock) ~= "number" then
-                    status("AUTO RESTOCK | Timer restock tidak terbaca")
-                    task.wait(1)
-                else
+                local ok, slotId, _, nextRestock = pcall(function()
+                    return EventKit.Shop.slot(eventData, now)
+                end)
+
+                if ok and type(nextRestock) == "number" then
                     local remaining = nextRestock - now
-                    local restockKey = tostring(slotId) .. ":" .. tostring(nextRestock)
+                    local restockKey =
+                        tostring(slotId) .. ":" .. tostring(nextRestock)
 
-                    if remaining <= RESTOCK_PREPARE_SECONDS and remaining > 0
-                        and preparedRestock ~= restockKey then
+                    -- TERSISA 5 DETIK:
+                    -- PAUSE MODE, LEAVE DUNGEON, LALU TP KE SHOP.
+                    if remaining <= RESTOCK_PREPARE_SECONDS
+                        and remaining > 0 then
 
-                        preparedRestock = restockKey
-                        if teleportToRestockSpot() then
-                            status(string.format(
-                                "RESTOCK %.1fs | TP ke spot pembelian...",
-                                math.max(0, remaining)
-                            ))
-                        else
-                            status("RESTOCK dekat | Gagal TP, karakter belum siap")
-                        end
-                    end
+                        if interruptedRestockKey ~= restockKey then
+                            interruptedRestockKey = restockKey
+                            RestockPaused = true
 
-                    if remaining <= 0 then
-                        -- Tunggu pergantian slot dari server agar pembelian tidak terlalu awal.
-                        local oldSlot = slotId
-                        local oldRestock = nextRestock
-                        local changed = false
+                            status("RESTOCK 5 DETIK | Pause FEST/X7 | Leave Dungeon...")
 
-                        while Running and AutoRestock and RestockRunId == runId do
-                            task.wait(0.05)
-
-                            local freshEvent = getEventShopData()
-                            if not freshEvent then break end
-
-                            local freshNow = Workspace:GetServerTimeNow()
-                            local freshSlot, _, freshNext = EventKit.Shop.slot(freshEvent, freshNow)
-
-                            if freshSlot ~= oldSlot or freshNext ~= oldRestock then
-                                changed = true
-                                break
+                            if pauseDungeonForRestock then
+                                pcall(pauseDungeonForRestock)
                             end
                         end
 
-                        if changed and Running and AutoRestock and RestockRunId == runId then
-                            status("RESTOCK BERGANTI | BORONG ITEM...")
-                            buyAllEventItems()
-                            preparedRestock = nil
-                            task.wait(0.25)
-                        else
-                            task.wait(0.1)
+                        -- Coba TP sampai berhasil.
+                        if preparedRestock ~= restockKey then
+                            if teleportToEventShopZone() then
+                                preparedRestock = restockKey
+                                status("DI EVENT SHOP ZONE | Menunggu restock...")
+                            else
+                                status("Gagal TP EventShopZone | Mencoba lagi...")
+                            end
                         end
-                    else
-                        task.wait(math.min(0.2, math.max(0.03, remaining - RESTOCK_PREPARE_SECONDS)))
+                    end
+
+                    -- WAKTU RESTOCK TIBA: BORONG ITEM.
+                    if remaining <= 0
+                        and attemptedRestock ~= restockKey then
+
+                        attemptedRestock = restockKey
+
+                        status("RESTOCK TIBA | BORONG 6 ITEM!")
+
+                        if not teleportToEventShopZone() then
+                            status("Gagal TP EventShopZone | Coba lagi...")
+                            attemptedRestock = nil
+                        else
+                            local buyOK, buyError = pcall(buyAllEventItems)
+
+                            if not buyOK then
+                                warn("[RESTOCK] ERROR:", buyError)
+                                status("RESTOCK ERROR: " .. tostring(buyError))
+                            end
+
+                            -- MODE SEBELUMNYA LANJUT LAGI.
+                            preparedRestock = nil
+                            interruptedRestockKey = nil
+                            RestockPaused = false
+
+                            status("RESTOCK SELESAI | Melanjutkan mode sebelumnya...")
+                        end
                     end
                 end
             end
+
+            task.wait(0.03)
         end
     end)
-
+end
 
 local function stopAutoRestock()
     AutoRestock = false
-    RestockRunId = RestockRunId + 1
+    RestockRunId += 1
+
+    RestockPaused = false
+    RestockLeaving = false
+    interruptedRestockKey = nil
+
     setToggle("AUTO RESTOCK", false)
     status("AUTO RESTOCK OFF")
 end
+
 
 --MOB HELPERS
 
@@ -1663,6 +1541,36 @@ local function setFestCombat(enabled)
 
     end
 
+end
+
+pauseDungeonForRestock = function()
+    if RestockLeaving then return end
+
+    RestockLeaving = true
+
+    -- Hentikan combat dan dodge selama keluar dungeon.
+    setFestCombat(false)
+    setAutoDodge(false)
+
+    updateCharacter()
+
+    if Humanoid and Root then
+        Humanoid:MoveTo(Root.Position)
+    end
+
+    -- Leave Dungeon langsung, tidak menunggu boss atau dungeon selesai.
+    local leaveOK, leaveResult = pcall(function()
+        return RequestRemote:InvokeServer("LeaveDungeon")
+    end)
+
+    if not leaveOK or leaveResult == false then
+        warn("[RESTOCK] LeaveDungeon gagal:", leaveResult)
+        status("LeaveDungeon gagal | Akan lanjut mencoba...")
+    else
+        status("LeaveDungeon terkirim | Menuju EventShopZone...")
+    end
+
+    RestockLeaving = false
 end
 
 local function finishBossPhase(id)
