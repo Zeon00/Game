@@ -1,0 +1,583 @@
+
+--============================================================
+-- LANTERN AUTO BUY HUB
+-- LIVE TIMER | AUTO TELEPORT | AUTO BUY | RETURN POSITION
+--============================================================
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Player = Players.LocalPlayer
+local Shared = ReplicatedStorage:WaitForChild("SwordShared")
+local EventKit = require(Shared:WaitForChild("EventKit"))
+local Request = Shared:WaitForChild("Remotes"):WaitForChild("Request")
+local ShopAPI = EventKit.Shop
+
+--============================================================
+-- SETTINGS
+--============================================================
+
+local RUNNING = true
+local AUTO_BUY = false
+local BUSY = false
+
+local CHECK_INTERVAL = 0.15
+local BUY_DELAY = 0.5
+local TELEPORT_DELAY = 0.25
+local RESTOCK_TRIGGER = 1
+
+local SHOP_POSITION = Vector3.new(
+    10.400007247924805,
+    3996.16015625,
+    172
+)
+
+local PRIORITY = {
+    "GemStash",
+    "Crate",
+    "PowerPotion",
+    "GoldPotion",
+    "MegaPotion",
+    "GoldBag",
+    "CoreBox",
+    "Scroll",
+    "AuraElixir",
+}
+
+local PriorityIndex = {}
+for i, key in ipairs(PRIORITY) do
+    PriorityIndex[key] = i
+end
+
+--============================================================
+-- GUI
+--============================================================
+
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local OldGui = PlayerGui:FindFirstChild("LanternAutoBuyHub")
+if OldGui then
+    OldGui:Destroy()
+end
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "LanternAutoBuyHub"
+Gui.ResetOnSpawn = false
+Gui.Parent = PlayerGui
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromOffset(330, 420)
+Main.Position = UDim2.new(0.5, -165, 0.5, -210)
+Main.BackgroundColor3 = Color3.fromRGB(22, 22, 29)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.Parent = Gui
+
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 9)
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(170, 120, 65)
+Stroke.Parent = Main
+
+local function label(parent, name, text, size, pos, color, fontSize)
+    local obj = Instance.new("TextLabel")
+    obj.Name = name
+    obj.Size = size
+    obj.Position = pos
+    obj.BackgroundTransparency = 1
+    obj.Text = text
+    obj.TextColor3 = color
+    obj.Font = Enum.Font.Gotham
+    obj.TextSize = fontSize
+    obj.TextXAlignment = Enum.TextXAlignment.Left
+    obj.Parent = parent
+    return obj
+end
+
+local Title = label(
+    Main, "Title", "LANTERN AUTO BUY",
+    UDim2.new(1, -50, 0, 34),
+    UDim2.fromOffset(12, 5),
+    Color3.fromRGB(255, 200, 110), 15
+)
+Title.Font = Enum.Font.GothamBold
+
+local Close = Instance.new("TextButton")
+Close.Size = UDim2.fromOffset(27, 27)
+Close.Position = UDim2.new(1, -34, 0, 7)
+Close.BackgroundColor3 = Color3.fromRGB(160, 45, 45)
+Close.Text = "X"
+Close.TextColor3 = Color3.new(1, 1, 1)
+Close.Font = Enum.Font.GothamBold
+Close.Parent = Main
+Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 5)
+
+local Timer = Instance.new("TextLabel")
+Timer.Size = UDim2.new(1, -20, 0, 43)
+Timer.Position = UDim2.fromOffset(10, 42)
+Timer.BackgroundColor3 = Color3.fromRGB(48, 38, 39)
+Timer.Text = "NEXT RESTOCK: --:--"
+Timer.TextColor3 = Color3.fromRGB(255, 210, 125)
+Timer.Font = Enum.Font.GothamBold
+Timer.TextSize = 17
+Timer.Parent = Main
+Instance.new("UICorner", Timer).CornerRadius = UDim.new(0, 6)
+
+local EventStatus = label(
+    Main, "EventStatus", "EVENT: CHECKING...",
+    UDim2.new(1, -20, 0, 22),
+    UDim2.fromOffset(12, 91),
+    Color3.fromRGB(190, 190, 200), 11
+)
+
+local Toggle = Instance.new("TextButton")
+Toggle.Size = UDim2.new(1, -20, 0, 37)
+Toggle.Position = UDim2.fromOffset(10, 116)
+Toggle.BackgroundColor3 = Color3.fromRGB(130, 45, 45)
+Toggle.Text = "AUTO BUY : OFF"
+Toggle.TextColor3 = Color3.new(1, 1, 1)
+Toggle.Font = Enum.Font.GothamBold
+Toggle.TextSize = 14
+Toggle.Parent = Main
+Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 6)
+
+local Status = label(
+    Main, "Status", "Status: Waiting...",
+    UDim2.new(1, -20, 0, 24),
+    UDim2.fromOffset(12, 158),
+    Color3.fromRGB(200, 200, 200), 11
+)
+
+local List = Instance.new("ScrollingFrame")
+List.Size = UDim2.new(1, -20, 1, -197)
+List.Position = UDim2.fromOffset(10, 190)
+List.BackgroundColor3 = Color3.fromRGB(32, 31, 39)
+List.BorderSizePixel = 0
+List.ScrollBarThickness = 4
+List.AutomaticCanvasSize = Enum.AutomaticSize.Y
+List.Parent = Main
+Instance.new("UICorner", List).CornerRadius = UDim.new(0, 6)
+
+local Padding = Instance.new("UIPadding")
+Padding.PaddingTop = UDim.new(0, 5)
+Padding.PaddingBottom = UDim.new(0, 5)
+Padding.PaddingLeft = UDim.new(0, 5)
+Padding.PaddingRight = UDim.new(0, 5)
+Padding.Parent = List
+
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 4)
+Layout.Parent = List
+
+local Rows = {}
+
+--============================================================
+-- ITEM LIST
+--============================================================
+
+local function setupItems(kit)
+    Rows = {}
+
+    for _, child in ipairs(List:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+
+    local items = {}
+
+    for _, item in ipairs(kit.Shop.List) do
+        if item.Stock and PriorityIndex[item.Key] then
+            table.insert(items, item)
+        end
+    end
+
+    table.sort(items, function(a, b)
+        return PriorityIndex[a.Key] < PriorityIndex[b.Key]
+    end)
+
+    for index, item in ipairs(items) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, -5, 0, 34)
+        row.BackgroundColor3 = Color3.fromRGB(48, 46, 55)
+        row.LayoutOrder = index
+        row.Parent = List
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
+
+        local name = label(
+            row, "Name", item.Key,
+            UDim2.new(0.52, 0, 1, 0),
+            UDim2.fromOffset(8, 0),
+            Color3.fromRGB(235, 235, 235), 11
+        )
+        name.Font = Enum.Font.GothamBold
+
+        local stock = label(
+            row, "Stock", "WAITING",
+            UDim2.new(0.48, -8, 1, 0),
+            UDim2.new(0.52, 0, 0, 0),
+            Color3.fromRGB(180, 180, 180), 10
+        )
+        stock.TextXAlignment = Enum.TextXAlignment.Right
+
+        Rows[item.Key] = {
+            Frame = row,
+            Stock = stock,
+            Item = item,
+        }
+    end
+
+    return items
+end
+
+--============================================================
+-- CHARACTER / POSITION
+--============================================================
+
+local function getRoot()
+    local character = Player.Character
+    if not character then
+        return nil
+    end
+
+    return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function teleportTo(position)
+    local character = Player.Character
+    local root = getRoot()
+
+    if not character or not root then
+        return false
+    end
+
+    character:PivotTo(CFrame.new(position))
+    task.wait(TELEPORT_DELAY)
+
+    return getRoot() ~= nil
+end
+
+--============================================================
+-- TIMER
+--============================================================
+
+local function formatTime(seconds)
+    seconds = math.max(0, math.floor(seconds))
+
+    local minutes = math.floor(seconds / 60)
+    local secs = seconds % 60
+
+    return string.format("%02d:%02d", minutes, secs)
+end
+
+--============================================================
+-- EVENT DATA
+--============================================================
+
+local CurrentKit
+local CurrentItems = {}
+local LastHandledSlot = nil
+
+local function getData()
+    local kit = EventKit.running()
+
+    if not kit then
+        return nil
+    end
+
+    if CurrentKit ~= kit then
+        CurrentKit = kit
+        CurrentItems = setupItems(kit)
+        LastHandledSlot = nil
+    end
+
+    local now = workspace:GetServerTimeNow()
+    local state = EventKit.state(Player)
+    local buys = state.Buys
+
+    local slot, startTime, nextTime = ShopAPI.slot(kit, now)
+    local stock = ShopAPI.stock(kit, slot)
+
+    return {
+        Kit = kit,
+        Now = now,
+        State = state,
+        Buys = buys,
+        Slot = slot,
+        StartTime = startTime,
+        NextTime = nextTime,
+        Stock = stock,
+    }
+end
+
+local function updateDisplay(data)
+    if not data then
+        Timer.Text = "EVENT NOT ACTIVE"
+        EventStatus.Text = "EVENT: NOT RUNNING"
+        return
+    end
+
+    Timer.Text = "NEXT RESTOCK: " ..
+        formatTime(data.NextTime - data.Now)
+
+    EventStatus.Text = "EVENT ACTIVE | SLOT " ..
+        tostring(data.Slot)
+
+    local tokens = tonumber(Player:GetAttribute("EvTokens"))
+        or tonumber(data.State.Tokens)
+        or 0
+
+    for _, item in ipairs(CurrentItems) do
+        local row = Rows[item.Key]
+
+        if row then
+            local left = ShopAPI.left(
+                data.Kit,
+                data.Buys,
+                item.Key,
+                data.Now
+            )
+
+            local price = tonumber(item.Price) or 0
+            row.Stock.Text = tostring(left) ..
+                " LEFT | " .. tostring(price) .. " T"
+
+            if left > 0 and tokens >= price then
+                row.Stock.TextColor3 = Color3.fromRGB(100, 255, 140)
+                row.Frame.BackgroundColor3 = Color3.fromRGB(43, 55, 46)
+            elseif left > 0 then
+                row.Stock.TextColor3 = Color3.fromRGB(255, 190, 90)
+                row.Frame.BackgroundColor3 = Color3.fromRGB(55, 49, 40)
+            else
+                row.Stock.TextColor3 = Color3.fromRGB(255, 105, 105)
+                row.Frame.BackgroundColor3 = Color3.fromRGB(48, 46, 55)
+            end
+        end
+    end
+end
+
+--============================================================
+-- BUY ALL AVAILABLE
+--============================================================
+
+local function buyAll(data)
+    local tokens = tonumber(Player:GetAttribute("EvTokens"))
+        or tonumber(EventKit.state(Player).Tokens)
+        or 0
+
+    for _, item in ipairs(CurrentItems) do
+        if not RUNNING then
+            break
+        end
+
+        local key = item.Key
+        local price = tonumber(item.Price) or 0
+
+        local currentState = EventKit.state(Player)
+        local left = ShopAPI.left(
+            data.Kit,
+            currentState.Buys,
+            key,
+            workspace:GetServerTimeNow()
+        )
+
+        local count = math.min(left, 3)
+
+        for purchaseIndex = 1, count do
+            if not RUNNING then
+                break
+            end
+
+            tokens = tonumber(Player:GetAttribute("EvTokens"))
+                or tonumber(EventKit.state(Player).Tokens)
+                or tokens
+
+            if tokens < price then
+                Status.Text = "Not enough tokens: " .. key
+                break
+            end
+
+            Status.Text = "Buying " .. key ..
+                " (" .. purchaseIndex .. "/" .. count .. ")"
+
+            local ok, result = pcall(function()
+                return Request:InvokeServer("EventBuy", key)
+            end)
+
+            if not ok or result ~= true then
+                Status.Text = "Purchase rejected: " .. key
+                if not ok then
+                    warn("[Lantern AutoBuy]", result)
+                end
+                break
+            end
+
+            task.wait(BUY_DELAY)
+
+            local updated = EventKit.state(Player)
+            tokens = tonumber(Player:GetAttribute("EvTokens"))
+                or tonumber(updated.Tokens)
+                or tokens
+
+            local remaining = ShopAPI.left(
+                data.Kit,
+                updated.Buys,
+                key,
+                workspace:GetServerTimeNow()
+            )
+
+            if remaining >= left then
+                Status.Text = "Waiting for server update: " .. key
+                task.wait(0.5)
+
+                updated = EventKit.state(Player)
+                remaining = ShopAPI.left(
+                    data.Kit,
+                    updated.Buys,
+                    key,
+                    workspace:GetServerTimeNow()
+                )
+
+                if remaining >= left then
+                    Status.Text = "Stock not updated: " .. key
+                    break
+                end
+            end
+
+            left = remaining
+        end
+    end
+end
+
+--============================================================
+-- RESTOCK TELEPORT CYCLE
+--============================================================
+
+local function restockCycle(oldSlot)
+    if BUSY or not AUTO_BUY then
+        return
+    end
+
+    BUSY = true
+
+    local root = getRoot()
+    if not root then
+        Status.Text = "Character unavailable"
+        BUSY = false
+        return
+    end
+
+    local originalCFrame = root.CFrame
+
+    Status.Text = "Teleporting to Shop Zone..."
+
+    local moved = teleportTo(SHOP_POSITION)
+
+    if not moved then
+        Status.Text = "Teleport failed"
+        BUSY = false
+        return
+    end
+
+    Status.Text = "Waiting for new stock..."
+
+    local newData = nil
+    local deadline = os.clock() + 8
+
+    repeat
+        task.wait(0.1)
+
+        local ok, data = pcall(getData)
+        if ok and data and data.Slot ~= oldSlot then
+            newData = data
+            break
+        end
+    until os.clock() >= deadline or not RUNNING
+
+    if newData and RUNNING then
+        updateDisplay(newData)
+        Status.Text = "New stock detected! Buying..."
+
+        local ok, err = pcall(function()
+            buyAll(newData)
+        end)
+
+        if not ok then
+            warn("[Lantern AutoBuy]", err)
+            Status.Text = "Buy error"
+        end
+
+        LastHandledSlot = newData.Slot
+    else
+        Status.Text = "Restock not detected"
+    end
+
+    -- Return to the saved position after the purchase cycle.
+    if RUNNING and Player.Character then
+        Status.Text = "Returning to original position..."
+        Player.Character:PivotTo(originalCFrame)
+        task.wait(0.25)
+    end
+
+    Status.Text = "Waiting for next restock..."
+    BUSY = false
+end
+
+--============================================================
+-- CONTROLS
+--============================================================
+
+Toggle.MouseButton1Click:Connect(function()
+    AUTO_BUY = not AUTO_BUY
+
+    Toggle.Text = AUTO_BUY and "AUTO BUY : ON" or "AUTO BUY : OFF"
+    Toggle.BackgroundColor3 = AUTO_BUY
+        and Color3.fromRGB(35, 135, 70)
+        or Color3.fromRGB(130, 45, 45)
+
+    Status.Text = AUTO_BUY
+        and "Monitoring restock timer..."
+        or "Auto Buy paused"
+end)
+
+Close.MouseButton1Click:Connect(function()
+    RUNNING = false
+    AUTO_BUY = false
+    Gui:Destroy()
+end)
+
+--============================================================
+-- MAIN LOOP
+--============================================================
+
+task.spawn(function()
+    while RUNNING do
+        local ok, data = pcall(getData)
+
+        if ok and data then
+            updateDisplay(data)
+
+            if AUTO_BUY and not BUSY then
+                local remaining = data.NextTime - data.Now
+
+                if remaining <= RESTOCK_TRIGGER
+                    and data.Slot ~= LastHandledSlot then
+
+                    task.spawn(function()
+                        restockCycle(data.Slot)
+                    end)
+                end
+            end
+        elseif not ok then
+            Timer.Text = "DATA ERROR"
+            Status.Text = "Check Output"
+            warn("[Lantern AutoBuy]", data)
+        else
+            Timer.Text = "WAITING FOR EVENT"
+            EventStatus.Text = "EVENT: NOT ACTIVE"
+        end
+
+        task.wait(CHECK_INTERVAL)
+    end
+end)
