@@ -453,6 +453,14 @@ end
 -- BOSS SPAWN CONTROL
 
 local function activateBossPhaseDodge()
+    -- Jangan izinkan sistem FEST/X7 mengaktifkan Dodge
+    -- selama Eclipse sedang mengambil alih.
+    if EclipsePaused or EclipsePriority or EclipseInRun then
+        AutoDodge = false
+        setToggle("AUTO DODGE", false)
+        return
+    end
+
     if ActiveMode == "FEST" then
         AutoDodge = true
         setToggle("AUTO DODGE", true)
@@ -1105,6 +1113,17 @@ local function setAutoDodge(enabled)
 end
 
 local function setFestCombat(enabled)
+    -- FEST/X7 tidak boleh menghidupkan combat saat Eclipse aktif.
+    if enabled and (EclipsePaused or EclipsePriority or EclipseInRun) then
+        stopCombat()
+        stopSkill()
+        setAutoDodge(false)
+
+        setToggle("SWING + HIT", false)
+        setToggle("AUTO SKILL", false)
+        return
+    end
+
     if enabled then
         startCombat()
         startSkill()
@@ -1858,11 +1877,16 @@ local function runOneDungeon(id)
     end
 
     if result == false then
-        status("EnterDungeon ditolak.")
-        return false
-    end
+    status("EnterDungeon ditolak.")
+    return false
+end
 
-    setFestCombat(true)
+-- Cek ulang karena Eclipse bisa aktif saat EnterDungeon menunggu.
+if not alive(id) or EclipsePaused or EclipsePriority or EclipseInRun then
+    return false
+end
+
+setFestCombat(true)
 
     if ActiveMode == "X7" then
         setAutoDodge(false)
