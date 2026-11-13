@@ -1724,9 +1724,7 @@ local function startEclipse()
             task.wait(2)
 
             local world2Position = Vector3.new(
-    0,
-    4003.497802734375,
-    24.5
+    117.29739379882812, 4003.597900390625, 4.965570449829102
 )
 
             eclipseStatus("Menuju posisi 1 World 2...")
