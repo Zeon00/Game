@@ -448,8 +448,12 @@ end
 -- AUTO SWING + HIT
 --============================================================
 
+local function stopCombat()
+    AutoCombat = false
+end
+
 local function startCombat()
-    if AutoCombat then return end
+    if not Running or AutoCombat then return end
 
     AutoCombat = true
 
@@ -482,10 +486,6 @@ end
             task.wait(SWING_DELAY)
         end
     end)
-end
-
-local function stopCombat()
-    AutoCombat = false
 end
 
 -- AUTO SKILL MOB TARGET
@@ -1076,10 +1076,6 @@ local function runDodge()
                     Root.AssemblyAngularVelocity = Vector3.zero
                 end)
 
-                if EclipseInRun then
-                    EclipseReturnAt = os.clock() + 0.65
-                end
-
                 if IsGoingToFloorGlow then
                     DodgeStatus = "DODGE | Aman, lanjut ke FloorGlow"
                 else
@@ -1088,26 +1084,6 @@ local function runDodge()
                 return
             end
         end
-    end
-end
-
-local function walkBackToUmbra()
-    if not EclipseInRun or not AutoDodge then return end
-    if os.clock() < EclipseReturnAt then return end
-    if os.clock() - EclipseLastMove < 0.25 then return end
-
-    local umbra = EclipseTarget
-    if not umbra or not umbra.Parent or isDead(umbra) then return end
-
-    updateCharacter()
-    if not Root or not Humanoid or Humanoid.Health <= 0 then return end
-
-    local mobRoot = getMobRoot(umbra)
-    if not mobRoot then return end
-
-    if (Root.Position - mobRoot.Position).Magnitude > 8 then
-        EclipseLastMove = os.clock()
-        Humanoid:MoveTo((mobRoot.CFrame * CFrame.new(0, 0, 5)).Position)
     end
 end
 
@@ -3674,7 +3650,6 @@ task.spawn(function()
     while Running do
         if AutoDodge then
             pcall(runDodge)
-            pcall(walkBackToUmbra)
         end
         task.wait(DODGE.SCAN_INTERVAL)
     end
