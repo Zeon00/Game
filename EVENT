@@ -1,20 +1,6 @@
 --============================================================
 -- ANIME FORGING | ULTIMATE AUTOMATION HUB
--- 10 TOGGLE | STANDALONE GUI
---
--- 1. AUTO SWING + HIT
--- 2. AUTO SKILL MOB TARGET
--- 3. TP BEHIND MOB
--- 4. AUTO DUNGEON
--- 5. AUTO ECLIPSE
--- 6. AUTO CLAIM ALL REWARDS
--- 7. AUTO ENCHANT
--- 8. AUTO REBIRTH
--- 9. AUTO DODGE | RING + WEDGE FAN
--- 10. AUTO FEST | POS1/POS2 + FLOOR GLOW + PARADE MASTER
---
--- STANDALONE GUI | DRAG | MINIMIZE | DESTROY
--- SINGLE INSTANCE | CENTRAL CLEANUP
+-- 10 TOGGLE | DELTA PLAYERGUI STARTUP FIX
 --============================================================
 
 local Players = game:GetService("Players")
@@ -27,6 +13,94 @@ local Workspace = game:GetService("Workspace")
 local PathfindingService = game:GetService("PathfindingService")
 
 local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+--============================================================
+-- STARTUP GUI | DIBUAT LANGSUNG DI PLAYERGUI
+--============================================================
+
+pcall(function()
+    local old = PlayerGui:FindFirstChild("AF_StartupStatus")
+    if old then old:Destroy() end
+end)
+
+local StartupGui = Instance.new("ScreenGui")
+StartupGui.Name = "AF_StartupStatus"
+StartupGui.ResetOnSpawn = false
+StartupGui.IgnoreGuiInset = true
+StartupGui.DisplayOrder = 10000
+StartupGui.Parent = PlayerGui
+
+local StartupFrame = Instance.new("Frame")
+StartupFrame.Size = UDim2.fromOffset(310, 75)
+StartupFrame.Position = UDim2.new(0.5, -155, 0, 25)
+StartupFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+StartupFrame.BorderSizePixel = 0
+StartupFrame.Parent = StartupGui
+Instance.new("UICorner", StartupFrame).CornerRadius = UDim.new(0, 8)
+
+local StartupTitle = Instance.new("TextLabel")
+StartupTitle.Size = UDim2.new(1, -16, 0, 25)
+StartupTitle.Position = UDim2.fromOffset(8, 5)
+StartupTitle.BackgroundTransparency = 1
+StartupTitle.Text = "ANIME FORGING | STARTING"
+StartupTitle.TextColor3 = Color3.fromRGB(255, 205, 120)
+StartupTitle.Font = Enum.Font.GothamBold
+StartupTitle.TextSize = 13
+StartupTitle.TextXAlignment = Enum.TextXAlignment.Left
+StartupTitle.Parent = StartupFrame
+
+local StartupStatus = Instance.new("TextLabel")
+StartupStatus.Size = UDim2.new(1, -16, 0, 35)
+StartupStatus.Position = UDim2.fromOffset(8, 32)
+StartupStatus.BackgroundTransparency = 1
+StartupStatus.Text = "Memuat script..."
+StartupStatus.TextColor3 = Color3.fromRGB(230, 230, 230)
+StartupStatus.Font = Enum.Font.Gotham
+StartupStatus.TextSize = 11
+StartupStatus.TextWrapped = true
+StartupStatus.TextXAlignment = Enum.TextXAlignment.Left
+StartupStatus.Parent = StartupFrame
+
+local function startupStatus(message)
+    pcall(function()
+        StartupStatus.Text = tostring(message)
+    end)
+end
+
+--============================================================
+-- WAIT CHILD DENGAN TIMEOUT
+--============================================================
+
+local function waitChild(parent, name, timeout)
+    local started = os.clock()
+    local object = parent and parent:FindFirstChild(name)
+
+    while not object and os.clock() - started < (timeout or 10) do
+        task.wait(0.1)
+        object = parent and parent:FindFirstChild(name)
+    end
+
+    return object
+end
+
+local function loadModule(moduleScript, name)
+    if not moduleScript then
+        startupStatus("MODULE TIDAK DITEMUKAN: " .. name)
+        error("Missing ModuleScript: " .. name, 0)
+    end
+
+    startupStatus("Memuat module: " .. name)
+
+    local success, result = pcall(require, moduleScript)
+
+    if not success then
+        startupStatus("MODULE ERROR: " .. name .. " | " .. tostring(result))
+        error("Require failed: " .. name .. " | " .. tostring(result), 0)
+    end
+
+    return result
+end
 
 --============================================================
 -- CLEAN OLD INSTANCE
@@ -42,12 +116,12 @@ if Old.Cleanup then
 end
 
 pcall(function()
-    local g = CoreGui:FindFirstChild("AF_SwingSkillOrbit")
+    local g = PlayerGui:FindFirstChild("AF_SwingSkillOrbit")
     if g then g:Destroy() end
 end)
 
 pcall(function()
-    local g = Player:WaitForChild("PlayerGui"):FindFirstChild("AF_SwingSkillOrbit")
+    local g = CoreGui:FindFirstChild("AF_SwingSkillOrbit")
     if g then g:Destroy() end
 end)
 
@@ -55,24 +129,66 @@ end)
 -- REMOTES
 --============================================================
 
-local SwordShared = ReplicatedStorage:WaitForChild("SwordShared")
-local Remotes = SwordShared:WaitForChild("Remotes")
+startupStatus("Mencari SwordShared...")
 
-local SwingRemote = Remotes:WaitForChild("Swing")
-local HitRemote = Remotes:WaitForChild("Hit")
-local RequestRemote = Remotes:WaitForChild("Request")
+local SwordShared = waitChild(ReplicatedStorage, "SwordShared", 15)
 
-local PlayerState = require(
-    SwordShared:WaitForChild("Client"):WaitForChild("PlayerState")
-)
+if not SwordShared then
+    startupStatus("ERROR: SwordShared tidak ditemukan")
+    error("SwordShared not found", 0)
+end
 
-local DungeonConfig = require(
-    SwordShared:WaitForChild("DungeonConfig")
-)
+startupStatus("Mencari Remotes...")
 
-local Mastery = require(
-    SwordShared:WaitForChild("Mastery")
-)
+local Remotes = waitChild(SwordShared, "Remotes", 15)
+
+if not Remotes then
+    startupStatus("ERROR: Remotes tidak ditemukan")
+    error("Remotes not found", 0)
+end
+
+local SwingRemote = waitChild(Remotes, "Swing", 10)
+local HitRemote = waitChild(Remotes, "Hit", 10)
+local RequestRemote = waitChild(Remotes, "Request", 10)
+
+if not SwingRemote or not HitRemote or not RequestRemote then
+    local missing = {}
+
+    if not SwingRemote then
+        table.insert(missing, "Swing")
+    end
+
+    if not HitRemote then
+        table.insert(missing, "Hit")
+    end
+
+    if not RequestRemote then
+        table.insert(missing, "Request")
+    end
+
+    startupStatus("REMOTE HILANG: " .. table.concat(missing, ", "))
+    error("Missing remote(s): " .. table.concat(missing, ", "), 0)
+end
+
+--============================================================
+-- MODULES
+--============================================================
+
+startupStatus("Memuat PlayerState...")
+
+local ClientFolder = waitChild(SwordShared, "Client", 10)
+local PlayerStateModule =
+    ClientFolder and waitChild(ClientFolder, "PlayerState", 10)
+
+local DungeonConfigModule =
+    waitChild(SwordShared, "DungeonConfig", 10)
+
+local MasteryModule =
+    waitChild(SwordShared, "Mastery", 10)
+
+local PlayerState = loadModule(PlayerStateModule, "PlayerState")
+local DungeonConfig = loadModule(DungeonConfigModule, "DungeonConfig")
+local Mastery = loadModule(MasteryModule, "Mastery")
 
 --============================================================
 -- PROGRESSION MODULE
@@ -80,11 +196,16 @@ local Mastery = require(
 
 local ProgressionModule = nil
 
+startupStatus("Mencari Progression...")
+
 for _, object in ipairs(ReplicatedStorage:GetDescendants()) do
-    if object:IsA("ModuleScript") and object.Name == "Progression" then
+    if object:IsA("ModuleScript")
+        and object.Name == "Progression" then
+
         local ok, result = pcall(require, object)
 
-        if ok and type(result) == "table"
+        if ok
+            and type(result) == "table"
             and type(result.rebirthCost) == "function"
             and type(result.rebirthNeedMet) == "function" then
 
@@ -93,6 +214,8 @@ for _, object in ipairs(ReplicatedStorage:GetDescendants()) do
         end
     end
 end
+
+startupStatus("Dependency berhasil dimuat. Menyiapkan GUI...")
 
 --============================================================
 -- SETTINGS
@@ -3499,13 +3622,16 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local guiOK = pcall(function()
-    Gui.Parent = CoreGui
-end)
+Gui.Parent = PlayerGui
 
-if not guiOK or not Gui.Parent then
-    Gui.Parent = Player:WaitForChild("PlayerGui")
+if not Gui.Parent then
+    startupStatus("ERROR: GUI gagal dipasang ke PlayerGui")
+    error("GUI parent failed", 0)
 end
+
+pcall(function()
+    StartupGui:Destroy()
+end)
 
 local Camera = Workspace.CurrentCamera
 
