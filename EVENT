@@ -1,6 +1,20 @@
 --============================================================
 -- ANIME FORGING | ULTIMATE AUTOMATION HUB
--- 10 TOGGLE | DELTA PLAYERGUI STARTUP FIX
+-- 10 TOGGLE | STANDALONE GUI
+--
+-- 1. AUTO SWING + HIT
+-- 2. AUTO SKILL MOB TARGET
+-- 3. TP BEHIND MOB
+-- 4. AUTO DUNGEON
+-- 5. AUTO ECLIPSE
+-- 6. AUTO CLAIM ALL REWARDS
+-- 7. AUTO ENCHANT
+-- 8. AUTO REBIRTH
+-- 9. AUTO DODGE | RING + WEDGE FAN
+-- 10. AUTO FEST | POS1/POS2 + FLOOR GLOW + PARADE MASTER
+--
+-- STANDALONE GUI | DRAG | MINIMIZE | DESTROY
+-- SINGLE INSTANCE | CENTRAL CLEANUP
 --============================================================
 
 local Players = game:GetService("Players")
@@ -13,94 +27,6 @@ local Workspace = game:GetService("Workspace")
 local PathfindingService = game:GetService("PathfindingService")
 
 local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
-
---============================================================
--- STARTUP GUI | DIBUAT LANGSUNG DI PLAYERGUI
---============================================================
-
-pcall(function()
-    local old = PlayerGui:FindFirstChild("AF_StartupStatus")
-    if old then old:Destroy() end
-end)
-
-local StartupGui = Instance.new("ScreenGui")
-StartupGui.Name = "AF_StartupStatus"
-StartupGui.ResetOnSpawn = false
-StartupGui.IgnoreGuiInset = true
-StartupGui.DisplayOrder = 10000
-StartupGui.Parent = PlayerGui
-
-local StartupFrame = Instance.new("Frame")
-StartupFrame.Size = UDim2.fromOffset(310, 75)
-StartupFrame.Position = UDim2.new(0.5, -155, 0, 25)
-StartupFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
-StartupFrame.BorderSizePixel = 0
-StartupFrame.Parent = StartupGui
-Instance.new("UICorner", StartupFrame).CornerRadius = UDim.new(0, 8)
-
-local StartupTitle = Instance.new("TextLabel")
-StartupTitle.Size = UDim2.new(1, -16, 0, 25)
-StartupTitle.Position = UDim2.fromOffset(8, 5)
-StartupTitle.BackgroundTransparency = 1
-StartupTitle.Text = "ANIME FORGING | STARTING"
-StartupTitle.TextColor3 = Color3.fromRGB(255, 205, 120)
-StartupTitle.Font = Enum.Font.GothamBold
-StartupTitle.TextSize = 13
-StartupTitle.TextXAlignment = Enum.TextXAlignment.Left
-StartupTitle.Parent = StartupFrame
-
-local StartupStatus = Instance.new("TextLabel")
-StartupStatus.Size = UDim2.new(1, -16, 0, 35)
-StartupStatus.Position = UDim2.fromOffset(8, 32)
-StartupStatus.BackgroundTransparency = 1
-StartupStatus.Text = "Memuat script..."
-StartupStatus.TextColor3 = Color3.fromRGB(230, 230, 230)
-StartupStatus.Font = Enum.Font.Gotham
-StartupStatus.TextSize = 11
-StartupStatus.TextWrapped = true
-StartupStatus.TextXAlignment = Enum.TextXAlignment.Left
-StartupStatus.Parent = StartupFrame
-
-local function startupStatus(message)
-    pcall(function()
-        StartupStatus.Text = tostring(message)
-    end)
-end
-
---============================================================
--- WAIT CHILD DENGAN TIMEOUT
---============================================================
-
-local function waitChild(parent, name, timeout)
-    local started = os.clock()
-    local object = parent and parent:FindFirstChild(name)
-
-    while not object and os.clock() - started < (timeout or 10) do
-        task.wait(0.1)
-        object = parent and parent:FindFirstChild(name)
-    end
-
-    return object
-end
-
-local function loadModule(moduleScript, name)
-    if not moduleScript then
-        startupStatus("MODULE TIDAK DITEMUKAN: " .. name)
-        error("Missing ModuleScript: " .. name, 0)
-    end
-
-    startupStatus("Memuat module: " .. name)
-
-    local success, result = pcall(require, moduleScript)
-
-    if not success then
-        startupStatus("MODULE ERROR: " .. name .. " | " .. tostring(result))
-        error("Require failed: " .. name .. " | " .. tostring(result), 0)
-    end
-
-    return result
-end
 
 --============================================================
 -- CLEAN OLD INSTANCE
@@ -116,12 +42,12 @@ if Old.Cleanup then
 end
 
 pcall(function()
-    local g = PlayerGui:FindFirstChild("AF_SwingSkillOrbit")
+    local g = CoreGui:FindFirstChild("AF_SwingSkillOrbit")
     if g then g:Destroy() end
 end)
 
 pcall(function()
-    local g = CoreGui:FindFirstChild("AF_SwingSkillOrbit")
+    local g = Player:WaitForChild("PlayerGui"):FindFirstChild("AF_SwingSkillOrbit")
     if g then g:Destroy() end
 end)
 
@@ -129,66 +55,24 @@ end)
 -- REMOTES
 --============================================================
 
-startupStatus("Mencari SwordShared...")
+local SwordShared = ReplicatedStorage:WaitForChild("SwordShared")
+local Remotes = SwordShared:WaitForChild("Remotes")
 
-local SwordShared = waitChild(ReplicatedStorage, "SwordShared", 15)
+local SwingRemote = Remotes:WaitForChild("Swing")
+local HitRemote = Remotes:WaitForChild("Hit")
+local RequestRemote = Remotes:WaitForChild("Request")
 
-if not SwordShared then
-    startupStatus("ERROR: SwordShared tidak ditemukan")
-    error("SwordShared not found", 0)
-end
+local PlayerState = require(
+    SwordShared:WaitForChild("Client"):WaitForChild("PlayerState")
+)
 
-startupStatus("Mencari Remotes...")
+local DungeonConfig = require(
+    SwordShared:WaitForChild("DungeonConfig")
+)
 
-local Remotes = waitChild(SwordShared, "Remotes", 15)
-
-if not Remotes then
-    startupStatus("ERROR: Remotes tidak ditemukan")
-    error("Remotes not found", 0)
-end
-
-local SwingRemote = waitChild(Remotes, "Swing", 10)
-local HitRemote = waitChild(Remotes, "Hit", 10)
-local RequestRemote = waitChild(Remotes, "Request", 10)
-
-if not SwingRemote or not HitRemote or not RequestRemote then
-    local missing = {}
-
-    if not SwingRemote then
-        table.insert(missing, "Swing")
-    end
-
-    if not HitRemote then
-        table.insert(missing, "Hit")
-    end
-
-    if not RequestRemote then
-        table.insert(missing, "Request")
-    end
-
-    startupStatus("REMOTE HILANG: " .. table.concat(missing, ", "))
-    error("Missing remote(s): " .. table.concat(missing, ", "), 0)
-end
-
---============================================================
--- MODULES
---============================================================
-
-startupStatus("Memuat PlayerState...")
-
-local ClientFolder = waitChild(SwordShared, "Client", 10)
-local PlayerStateModule =
-    ClientFolder and waitChild(ClientFolder, "PlayerState", 10)
-
-local DungeonConfigModule =
-    waitChild(SwordShared, "DungeonConfig", 10)
-
-local MasteryModule =
-    waitChild(SwordShared, "Mastery", 10)
-
-local PlayerState = loadModule(PlayerStateModule, "PlayerState")
-local DungeonConfig = loadModule(DungeonConfigModule, "DungeonConfig")
-local Mastery = loadModule(MasteryModule, "Mastery")
+local Mastery = require(
+    SwordShared:WaitForChild("Mastery")
+)
 
 --============================================================
 -- PROGRESSION MODULE
@@ -196,16 +80,11 @@ local Mastery = loadModule(MasteryModule, "Mastery")
 
 local ProgressionModule = nil
 
-startupStatus("Mencari Progression...")
-
 for _, object in ipairs(ReplicatedStorage:GetDescendants()) do
-    if object:IsA("ModuleScript")
-        and object.Name == "Progression" then
-
+    if object:IsA("ModuleScript") and object.Name == "Progression" then
         local ok, result = pcall(require, object)
 
-        if ok
-            and type(result) == "table"
+        if ok and type(result) == "table"
             and type(result.rebirthCost) == "function"
             and type(result.rebirthNeedMet) == "function" then
 
@@ -214,8 +93,6 @@ for _, object in ipairs(ReplicatedStorage:GetDescendants()) do
         end
     end
 end
-
-startupStatus("Dependency berhasil dimuat. Menyiapkan GUI...")
 
 --============================================================
 -- SETTINGS
@@ -624,7 +501,9 @@ local function stopSkill()
 end
 
 --============================================================
--- TP BEHIND MOB
+-- TP BEHIND MOB | WORLD-SPACE HUMANOID STEERING
+-- Tidak menahan tombol W / tidak memutar kamera.
+-- Semua state Humanoid dipulihkan saat toggle OFF / cleanup.
 --============================================================
 
 local function getTPTarget()
@@ -632,10 +511,8 @@ local function getTPTarget()
         if EclipseTarget.Parent and not isDead(EclipseTarget) then
             return EclipseTarget
         end
-
         return nil
     end
-
     return getTarget()
 end
 
@@ -648,24 +525,16 @@ local TP_MOVE_SPEED = 24
 
 local TP_ACTIVE = false
 local TP_ORIGINAL_WALKSPEED = nil
+local TP_ORIGINAL_AUTOROTATE = nil
 local TP_DODGE_PAUSED = false
 
 local TP_LAST_GOAL = nil
 local TP_CURRENT_PATH = nil
 local TP_BLOCKED = false
+local TP_BLOCKED_CONNECTION = nil
+local TP_LAST_REPATH = 0
 
-local TP_VIM = game:GetService("VirtualInputManager")
 local TP_PATH_SERVICE = PathfindingService
-
-local function tpKeyW(state)
-    pcall(function()
-        TP_VIM:SendKeyEvent(state, Enum.KeyCode.W, false, game)
-    end)
-end
-
-local function tpReleaseKeys()
-    tpKeyW(false)
-end
 
 local function tpGetCharacter()
     local character = Player.Character
@@ -673,37 +542,14 @@ local function tpGetCharacter()
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local root = character:FindFirstChild("HumanoidRootPart")
-
-    if not humanoid or not root then return nil end
+    if not humanoid or not root or humanoid.Health <= 0 then return nil end
 
     return character, humanoid, root
 end
 
-local function tpFaceDirection(direction)
-    if direction.Magnitude < 0.05 then return end
-
-    local camera = Workspace.CurrentCamera
-    if not camera then return end
-
-    local horizontal = Vector3.new(direction.X, 0, direction.Z)
-
-    if horizontal.Magnitude < 0.05 then return end
-
-    camera.CFrame = CFrame.lookAt(
-        camera.CFrame.Position,
-        camera.CFrame.Position + horizontal.Unit
-    )
-end
-
 local function tpGetBehindPosition(mobRoot)
-    local behind = mobRoot.Position
-        - mobRoot.CFrame.LookVector * TP_BEHIND_DISTANCE
-
-    return Vector3.new(
-        behind.X,
-        mobRoot.Position.Y,
-        behind.Z
-    )
+    local behind = mobRoot.Position - mobRoot.CFrame.LookVector * TP_BEHIND_DISTANCE
+    return Vector3.new(behind.X, mobRoot.Position.Y, behind.Z)
 end
 
 local function tpComputePath(startPosition, goalPosition)
@@ -727,218 +573,242 @@ local function tpComputePath(startPosition, goalPosition)
 end
 
 local function tpStopMovement()
-    tpReleaseKeys()
-
-    local _, humanoid = tpGetCharacter()
-
+    local _, humanoid, root = tpGetCharacter()
     if humanoid then
         pcall(function()
             humanoid:Move(Vector3.zero, false)
+            if root then
+                humanoid:MoveTo(root.Position)
+            end
         end)
     end
+end
+
+local function tpRestoreHumanoid()
+    local _, humanoid = tpGetCharacter()
+    if humanoid then
+        if TP_ORIGINAL_WALKSPEED ~= nil then
+            pcall(function()
+                humanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
+            end)
+        end
+        if TP_ORIGINAL_AUTOROTATE ~= nil then
+            pcall(function()
+                humanoid.AutoRotate = TP_ORIGINAL_AUTOROTATE
+            end)
+        end
+    end
+
+    TP_ORIGINAL_WALKSPEED = nil
+    TP_ORIGINAL_AUTOROTATE = nil
+end
+
+local function tpClearPath()
+    if TP_BLOCKED_CONNECTION then
+        pcall(function() TP_BLOCKED_CONNECTION:Disconnect() end)
+        TP_BLOCKED_CONNECTION = nil
+    end
+    TP_CURRENT_PATH = nil
+    TP_LAST_GOAL = nil
+    TP_BLOCKED = false
 end
 
 local function stopTP()
     TP_ACTIVE = false
     AutoTP = false
     TP_DODGE_PAUSED = false
-
     TPRunId += 1
+
     tpStopMovement()
-
-    local _, humanoid = tpGetCharacter()
-
-    if humanoid and TP_ORIGINAL_WALKSPEED then
-        humanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
-    end
-
-    TP_ORIGINAL_WALKSPEED = nil
-    TP_CURRENT_PATH = nil
-    TP_LAST_GOAL = nil
+    tpRestoreHumanoid()
+    tpClearPath()
 end
 
 local function startTP()
-    if TP_ACTIVE then return end
+    if TP_ACTIVE or not Running then return end
 
     TP_ACTIVE = true
     AutoTP = true
-
     TPRunId += 1
     local thisRun = TPRunId
 
     task.spawn(function()
-        local _, humanoid = tpGetCharacter()
-
-        if not humanoid then
-            TP_ACTIVE = false
-            AutoTP = false
-            return
-        end
-
-        TP_ORIGINAL_WALKSPEED = humanoid.WalkSpeed
-        humanoid.WalkSpeed = TP_MOVE_SPEED
-        humanoid.AutoRotate = true
-
-        local currentWaypointIndex = 1
-        local waypoints = {}
-        local currentTarget
-        local lastProgressPosition
-        local lastProgressTime = os.clock()
-
-        local function running()
-            return Running
-                and TP_ACTIVE
-                and AutoTP
-                and TPRunId == thisRun
-        end
-
-        local function getCurrentMob()
-            local mob = getTPTarget()
-
-            if not mob or not mob.Parent or isDead(mob) then
-                return nil
+        local ok, err = xpcall(function()
+            local _, initialHumanoid = tpGetCharacter()
+            if not initialHumanoid then
+                return
             end
 
-            local mobRoot = getMobRoot(mob)
+            TP_ORIGINAL_WALKSPEED = initialHumanoid.WalkSpeed
+            TP_ORIGINAL_AUTOROTATE = initialHumanoid.AutoRotate
 
-            if not mobRoot then return nil end
+            local currentWaypointIndex = 1
+            local waypoints = {}
+            local currentTarget = nil
+            local lastProgressPosition = nil
+            local lastProgressTime = os.clock()
 
-            return mob, mobRoot
-        end
+            local function running()
+                return Running and TP_ACTIVE and AutoTP and TPRunId == thisRun
+            end
 
-        local function makeNewPath(mobRoot, root)
-            local goal = tpGetBehindPosition(mobRoot)
-            local path = tpComputePath(root.Position, goal)
-
-            if not path then return false end
-
-            TP_CURRENT_PATH = path
-            TP_BLOCKED = false
-
-            waypoints = path:GetWaypoints()
-            currentWaypointIndex = math.min(2, #waypoints)
-
-            TP_LAST_GOAL = goal
-            lastProgressPosition = root.Position
-            lastProgressTime = os.clock()
-
-            path.Blocked:Connect(function(blockedIndex)
-                if blockedIndex >= currentWaypointIndex then
-                    TP_BLOCKED = true
+            local function getCurrentMob()
+                local mob = getTPTarget()
+                if not mob or not mob.Parent or isDead(mob) then
+                    return nil
                 end
-            end)
-
-            return #waypoints > 0
-        end
-
-        while running() do
-            local character, currentHumanoid, root = tpGetCharacter()
-
-            if not character then
-                task.wait(0.3)
-                continue
+                local mobRoot = getMobRoot(mob)
+                if not mobRoot then return nil end
+                return mob, mobRoot
             end
 
-            if TP_DODGE_PAUSED then
-                tpReleaseKeys()
+            local function makeNewPath(mobRoot, root)
+                local goal = tpGetBehindPosition(mobRoot)
+                local path = tpComputePath(root.Position, goal)
+                if not path then return false end
 
-                pcall(function()
-                    currentHumanoid:Move(Vector3.zero, false)
+                if TP_BLOCKED_CONNECTION then
+                    pcall(function() TP_BLOCKED_CONNECTION:Disconnect() end)
+                    TP_BLOCKED_CONNECTION = nil
+                end
+
+                TP_CURRENT_PATH = path
+                TP_BLOCKED = false
+                waypoints = path:GetWaypoints()
+                currentWaypointIndex = math.min(2, #waypoints)
+                TP_LAST_GOAL = goal
+                lastProgressPosition = root.Position
+                lastProgressTime = os.clock()
+
+                TP_BLOCKED_CONNECTION = path.Blocked:Connect(function(blockedIndex)
+                    if blockedIndex >= currentWaypointIndex then
+                        TP_BLOCKED = true
+                    end
                 end)
 
-                task.wait(0.035)
-                continue
+                return #waypoints > 0
             end
 
-            currentHumanoid.WalkSpeed = TP_MOVE_SPEED
+            while running() do
+                local character, currentHumanoid, root = tpGetCharacter()
+                if not character then
+                    task.wait(0.25)
+                    continue
+                end
 
-            local mob, mobRoot = getCurrentMob()
+                -- Pastikan nilai yang diubah TP hanya aktif selama toggle ON.
+                currentHumanoid.WalkSpeed = TP_MOVE_SPEED
+                currentHumanoid.AutoRotate = true
 
-            if not mob or not mobRoot then
-                tpStopMovement()
-                currentTarget = nil
-                waypoints = {}
-                task.wait(0.2)
-                continue
-            end
+                if TP_DODGE_PAUSED then
+                    currentHumanoid:Move(Vector3.zero, false)
+                    task.wait(0.035)
+                    continue
+                end
 
-            if currentTarget and currentTarget ~= mob then
-                local oldRoot = getMobRoot(currentTarget)
+                local mob, mobRoot = getCurrentMob()
+                if not mob or not mobRoot then
+                    currentHumanoid:Move(Vector3.zero, false)
+                    currentTarget = nil
+                    waypoints = {}
+                    tpClearPath()
+                    task.wait(0.2)
+                    continue
+                end
 
-                if oldRoot and currentTarget.Parent and not isDead(currentTarget) then
-                    mob = currentTarget
-                    mobRoot = oldRoot
+                -- Pertahankan target lama sampai mati / hilang.
+                if currentTarget and currentTarget ~= mob then
+                    local oldRoot = getMobRoot(currentTarget)
+                    if oldRoot and currentTarget.Parent and not isDead(currentTarget) then
+                        mob = currentTarget
+                        mobRoot = oldRoot
+                    else
+                        currentTarget = mob
+                        waypoints = {}
+                        tpClearPath()
+                    end
                 else
                     currentTarget = mob
-                    waypoints = {}
                 end
-            else
-                currentTarget = mob
-            end
 
-            local goal = tpGetBehindPosition(mobRoot)
+                local goal = tpGetBehindPosition(mobRoot)
+                local needRepath =
+                    (#waypoints == 0 and (os.clock() - TP_LAST_REPATH) >= TP_REPATH_INTERVAL)
+                    or currentWaypointIndex > #waypoints
+                    or TP_BLOCKED
+                    or not TP_LAST_GOAL
+                    or (goal - TP_LAST_GOAL).Magnitude >= TP_REPATH_DISTANCE
+                    or (os.clock() - TP_LAST_REPATH) >= TP_REPATH_INTERVAL
 
-            local needRepath =
-                #waypoints == 0
-                or currentWaypointIndex > #waypoints
-                or TP_BLOCKED
-                or not TP_LAST_GOAL
-                or (goal - TP_LAST_GOAL).Magnitude >= TP_REPATH_DISTANCE
-                or (os.clock() - (TP_LAST_REPATH or 0)) >= TP_REPATH_INTERVAL
-
-            if lastProgressPosition then
-                if (root.Position - lastProgressPosition).Magnitude >= 0.6 then
-                    lastProgressPosition = root.Position
-                    lastProgressTime = os.clock()
-                elseif os.clock() - lastProgressTime >= TP_STUCK_TIME then
-                    needRepath = true
-                    lastProgressPosition = root.Position
-                    lastProgressTime = os.clock()
-                end
-            end
-
-            if needRepath then
-                tpReleaseKeys()
-
-                if makeNewPath(mobRoot, root) then
-                    TP_LAST_REPATH = os.clock()
-                end
-            end
-
-            local waypoint = waypoints[currentWaypointIndex]
-
-            if waypoint then
-                local difference = waypoint.Position - root.Position
-                local distance = difference.Magnitude
-
-                if distance <= TP_ARRIVAL_DISTANCE then
-                    tpReleaseKeys()
-                    currentWaypointIndex += 1
-                else
-                    if waypoint.Action == Enum.PathWaypointAction.Jump then
-                        currentHumanoid.Jump = true
+                if lastProgressPosition then
+                    if (root.Position - lastProgressPosition).Magnitude >= 0.6 then
+                        lastProgressPosition = root.Position
+                        lastProgressTime = os.clock()
+                    elseif os.clock() - lastProgressTime >= TP_STUCK_TIME then
+                        needRepath = true
+                        lastProgressPosition = root.Position
+                        lastProgressTime = os.clock()
                     end
-
-                    tpFaceDirection(difference)
-                    tpKeyW(true)
                 end
-            else
-                tpReleaseKeys()
-                task.wait(0.1)
+
+                if needRepath then
+                    currentHumanoid:Move(Vector3.zero, false)
+                    if makeNewPath(mobRoot, root) then
+                        TP_LAST_REPATH = os.clock()
+                    else
+                        -- Fallback waypoint langsung jika pathfinding gagal.
+                        -- Repath tetap diberi jeda agar tidak menghitung path tiap frame.
+                        waypoints = {{
+                            Position = goal,
+                            Action = Enum.PathWaypointAction.Walk
+                        }}
+                        currentWaypointIndex = 1
+                        TP_LAST_GOAL = goal
+                        TP_LAST_REPATH = os.clock()
+                    end
+                end
+
+                local waypoint = waypoints[currentWaypointIndex]
+                if waypoint then
+                    local difference = waypoint.Position - root.Position
+                    local horizontal = Vector3.new(difference.X, 0, difference.Z)
+
+                    if horizontal.Magnitude <= TP_ARRIVAL_DISTANCE
+                        and math.abs(difference.Y) <= 5 then
+                        currentWaypointIndex += 1
+                    else
+                        if waypoint.Action == Enum.PathWaypointAction.Jump then
+                            currentHumanoid.Jump = true
+                        end
+
+                        -- false = arah world-space, tidak bergantung arah kamera.
+                        if horizontal.Magnitude > 0.05 then
+                            currentHumanoid:Move(horizontal.Unit, false)
+                        else
+                            currentHumanoid:Move(Vector3.zero, false)
+                        end
+                    end
+                else
+                    currentHumanoid:Move(Vector3.zero, false)
+                end
+
+                task.wait(0.035)
             end
+        end, debug.traceback)
 
-            task.wait(0.035)
-        end
-
+        -- Selalu hentikan gerakan dan pulihkan state, termasuk jika loop error.
         tpStopMovement()
+        tpRestoreHumanoid()
+        tpClearPath()
 
-        local _, finalHumanoid = tpGetCharacter()
-
-        if finalHumanoid and TP_ORIGINAL_WALKSPEED then
-            finalHumanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
+        if not ok then
+            warn("[TP BEHIND] " .. tostring(err))
         end
 
-        TP_ORIGINAL_WALKSPEED = nil
+        if TPRunId == thisRun then
+            TP_ACTIVE = false
+            AutoTP = false
+        end
     end)
 end
 
@@ -3622,16 +3492,41 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-Gui.Parent = PlayerGui
+-- Delta / executor: utamakan gethui(), lalu CoreGui, terakhir PlayerGui.
+-- Setiap parent dicoba terpisah agar kegagalan satu metode tidak menghentikan GUI.
+local guiParented = false
 
-if not Gui.Parent then
-    startupStatus("ERROR: GUI gagal dipasang ke PlayerGui")
-    error("GUI parent failed", 0)
+if type(gethui) == "function" then
+    local ok, hiddenGui = pcall(gethui)
+    if ok and hiddenGui then
+        guiParented = pcall(function()
+            Gui.Parent = hiddenGui
+        end) and Gui.Parent ~= nil
+    end
 end
 
-pcall(function()
-    StartupGui:Destroy()
-end)
+if not guiParented then
+    local ok = pcall(function()
+        Gui.Parent = CoreGui
+    end)
+    guiParented = ok and Gui.Parent ~= nil
+end
+
+if not guiParented then
+    local ok, playerGui = pcall(function()
+        return Player:WaitForChild("PlayerGui", 10)
+    end)
+    if ok and playerGui then
+        local parentOK = pcall(function()
+            Gui.Parent = playerGui
+        end)
+        guiParented = parentOK and Gui.Parent ~= nil
+    end
+end
+
+if not guiParented then
+    error("[ANIME FORGING] Tidak bisa memasang GUI ke gethui/CoreGui/PlayerGui.")
+end
 
 local Camera = Workspace.CurrentCamera
 
@@ -4227,14 +4122,8 @@ function Controller.Cleanup()
     stopAntiVoid()
     releaseAllKeys()
     tpStopMovement()
-
-    local _, finalHumanoid = tpGetCharacter()
-
-    if finalHumanoid and TP_ORIGINAL_WALKSPEED then
-        finalHumanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
-    end
-
-    TP_ORIGINAL_WALKSPEED = nil
+    tpRestoreHumanoid()
+    tpClearPath()
 
     DungeonOwnsTP = false
     EclipseOwnsTP = false
