@@ -501,9 +501,7 @@ local function stopSkill()
 end
 
 --============================================================
--- TP BEHIND MOB | WORLD-SPACE HUMANOID STEERING
--- Tidak menahan tombol W / tidak memutar kamera.
--- Semua state Humanoid dipulihkan saat toggle OFF / cleanup.
+-- TP BEHIND MOB
 --============================================================
 
 local function getTPTarget()
@@ -511,8 +509,10 @@ local function getTPTarget()
         if EclipseTarget.Parent and not isDead(EclipseTarget) then
             return EclipseTarget
         end
+
         return nil
     end
+
     return getTarget()
 end
 
@@ -525,16 +525,24 @@ local TP_MOVE_SPEED = 24
 
 local TP_ACTIVE = false
 local TP_ORIGINAL_WALKSPEED = nil
-local TP_ORIGINAL_AUTOROTATE = nil
 local TP_DODGE_PAUSED = false
 
 local TP_LAST_GOAL = nil
 local TP_CURRENT_PATH = nil
 local TP_BLOCKED = false
-local TP_BLOCKED_CONNECTION = nil
-local TP_LAST_REPATH = 0
 
+local TP_VIM = game:GetService("VirtualInputManager")
 local TP_PATH_SERVICE = PathfindingService
+
+local function tpKeyW(state)
+    pcall(function()
+        TP_VIM:SendKeyEvent(state, Enum.KeyCode.W, false, game)
+    end)
+end
+
+local function tpReleaseKeys()
+    tpKeyW(false)
+end
 
 local function tpGetCharacter()
     local character = Player.Character
@@ -542,14 +550,37 @@ local function tpGetCharacter()
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local root = character:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not root or humanoid.Health <= 0 then return nil end
+
+    if not humanoid or not root then return nil end
 
     return character, humanoid, root
 end
 
+local function tpFaceDirection(direction)
+    if direction.Magnitude < 0.05 then return end
+
+    local camera = Workspace.CurrentCamera
+    if not camera then return end
+
+    local horizontal = Vector3.new(direction.X, 0, direction.Z)
+
+    if horizontal.Magnitude < 0.05 then return end
+
+    camera.CFrame = CFrame.lookAt(
+        camera.CFrame.Position,
+        camera.CFrame.Position + horizontal.Unit
+    )
+end
+
 local function tpGetBehindPosition(mobRoot)
-    local behind = mobRoot.Position - mobRoot.CFrame.LookVector * TP_BEHIND_DISTANCE
-    return Vector3.new(behind.X, mobRoot.Position.Y, behind.Z)
+    local behind = mobRoot.Position
+        - mobRoot.CFrame.LookVector * TP_BEHIND_DISTANCE
+
+    return Vector3.new(
+        behind.X,
+        mobRoot.Position.Y,
+        behind.Z
+    )
 end
 
 local function tpComputePath(startPosition, goalPosition)
@@ -573,242 +604,218 @@ local function tpComputePath(startPosition, goalPosition)
 end
 
 local function tpStopMovement()
-    local _, humanoid, root = tpGetCharacter()
+    tpReleaseKeys()
+
+    local _, humanoid = tpGetCharacter()
+
     if humanoid then
         pcall(function()
             humanoid:Move(Vector3.zero, false)
-            if root then
-                humanoid:MoveTo(root.Position)
-            end
         end)
     end
-end
-
-local function tpRestoreHumanoid()
-    local _, humanoid = tpGetCharacter()
-    if humanoid then
-        if TP_ORIGINAL_WALKSPEED ~= nil then
-            pcall(function()
-                humanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
-            end)
-        end
-        if TP_ORIGINAL_AUTOROTATE ~= nil then
-            pcall(function()
-                humanoid.AutoRotate = TP_ORIGINAL_AUTOROTATE
-            end)
-        end
-    end
-
-    TP_ORIGINAL_WALKSPEED = nil
-    TP_ORIGINAL_AUTOROTATE = nil
-end
-
-local function tpClearPath()
-    if TP_BLOCKED_CONNECTION then
-        pcall(function() TP_BLOCKED_CONNECTION:Disconnect() end)
-        TP_BLOCKED_CONNECTION = nil
-    end
-    TP_CURRENT_PATH = nil
-    TP_LAST_GOAL = nil
-    TP_BLOCKED = false
 end
 
 local function stopTP()
     TP_ACTIVE = false
     AutoTP = false
     TP_DODGE_PAUSED = false
-    TPRunId += 1
 
+    TPRunId += 1
     tpStopMovement()
-    tpRestoreHumanoid()
-    tpClearPath()
+
+    local _, humanoid = tpGetCharacter()
+
+    if humanoid and TP_ORIGINAL_WALKSPEED then
+        humanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
+    end
+
+    TP_ORIGINAL_WALKSPEED = nil
+    TP_CURRENT_PATH = nil
+    TP_LAST_GOAL = nil
 end
 
 local function startTP()
-    if TP_ACTIVE or not Running then return end
+    if TP_ACTIVE then return end
 
     TP_ACTIVE = true
     AutoTP = true
+
     TPRunId += 1
     local thisRun = TPRunId
 
     task.spawn(function()
-        local ok, err = xpcall(function()
-            local _, initialHumanoid = tpGetCharacter()
-            if not initialHumanoid then
-                return
-            end
+        local _, humanoid = tpGetCharacter()
 
-            TP_ORIGINAL_WALKSPEED = initialHumanoid.WalkSpeed
-            TP_ORIGINAL_AUTOROTATE = initialHumanoid.AutoRotate
-
-            local currentWaypointIndex = 1
-            local waypoints = {}
-            local currentTarget = nil
-            local lastProgressPosition = nil
-            local lastProgressTime = os.clock()
-
-            local function running()
-                return Running and TP_ACTIVE and AutoTP and TPRunId == thisRun
-            end
-
-            local function getCurrentMob()
-                local mob = getTPTarget()
-                if not mob or not mob.Parent or isDead(mob) then
-                    return nil
-                end
-                local mobRoot = getMobRoot(mob)
-                if not mobRoot then return nil end
-                return mob, mobRoot
-            end
-
-            local function makeNewPath(mobRoot, root)
-                local goal = tpGetBehindPosition(mobRoot)
-                local path = tpComputePath(root.Position, goal)
-                if not path then return false end
-
-                if TP_BLOCKED_CONNECTION then
-                    pcall(function() TP_BLOCKED_CONNECTION:Disconnect() end)
-                    TP_BLOCKED_CONNECTION = nil
-                end
-
-                TP_CURRENT_PATH = path
-                TP_BLOCKED = false
-                waypoints = path:GetWaypoints()
-                currentWaypointIndex = math.min(2, #waypoints)
-                TP_LAST_GOAL = goal
-                lastProgressPosition = root.Position
-                lastProgressTime = os.clock()
-
-                TP_BLOCKED_CONNECTION = path.Blocked:Connect(function(blockedIndex)
-                    if blockedIndex >= currentWaypointIndex then
-                        TP_BLOCKED = true
-                    end
-                end)
-
-                return #waypoints > 0
-            end
-
-            while running() do
-                local character, currentHumanoid, root = tpGetCharacter()
-                if not character then
-                    task.wait(0.25)
-                    continue
-                end
-
-                -- Pastikan nilai yang diubah TP hanya aktif selama toggle ON.
-                currentHumanoid.WalkSpeed = TP_MOVE_SPEED
-                currentHumanoid.AutoRotate = true
-
-                if TP_DODGE_PAUSED then
-                    currentHumanoid:Move(Vector3.zero, false)
-                    task.wait(0.035)
-                    continue
-                end
-
-                local mob, mobRoot = getCurrentMob()
-                if not mob or not mobRoot then
-                    currentHumanoid:Move(Vector3.zero, false)
-                    currentTarget = nil
-                    waypoints = {}
-                    tpClearPath()
-                    task.wait(0.2)
-                    continue
-                end
-
-                -- Pertahankan target lama sampai mati / hilang.
-                if currentTarget and currentTarget ~= mob then
-                    local oldRoot = getMobRoot(currentTarget)
-                    if oldRoot and currentTarget.Parent and not isDead(currentTarget) then
-                        mob = currentTarget
-                        mobRoot = oldRoot
-                    else
-                        currentTarget = mob
-                        waypoints = {}
-                        tpClearPath()
-                    end
-                else
-                    currentTarget = mob
-                end
-
-                local goal = tpGetBehindPosition(mobRoot)
-                local needRepath =
-                    (#waypoints == 0 and (os.clock() - TP_LAST_REPATH) >= TP_REPATH_INTERVAL)
-                    or currentWaypointIndex > #waypoints
-                    or TP_BLOCKED
-                    or not TP_LAST_GOAL
-                    or (goal - TP_LAST_GOAL).Magnitude >= TP_REPATH_DISTANCE
-                    or (os.clock() - TP_LAST_REPATH) >= TP_REPATH_INTERVAL
-
-                if lastProgressPosition then
-                    if (root.Position - lastProgressPosition).Magnitude >= 0.6 then
-                        lastProgressPosition = root.Position
-                        lastProgressTime = os.clock()
-                    elseif os.clock() - lastProgressTime >= TP_STUCK_TIME then
-                        needRepath = true
-                        lastProgressPosition = root.Position
-                        lastProgressTime = os.clock()
-                    end
-                end
-
-                if needRepath then
-                    currentHumanoid:Move(Vector3.zero, false)
-                    if makeNewPath(mobRoot, root) then
-                        TP_LAST_REPATH = os.clock()
-                    else
-                        -- Fallback waypoint langsung jika pathfinding gagal.
-                        -- Repath tetap diberi jeda agar tidak menghitung path tiap frame.
-                        waypoints = {{
-                            Position = goal,
-                            Action = Enum.PathWaypointAction.Walk
-                        }}
-                        currentWaypointIndex = 1
-                        TP_LAST_GOAL = goal
-                        TP_LAST_REPATH = os.clock()
-                    end
-                end
-
-                local waypoint = waypoints[currentWaypointIndex]
-                if waypoint then
-                    local difference = waypoint.Position - root.Position
-                    local horizontal = Vector3.new(difference.X, 0, difference.Z)
-
-                    if horizontal.Magnitude <= TP_ARRIVAL_DISTANCE
-                        and math.abs(difference.Y) <= 5 then
-                        currentWaypointIndex += 1
-                    else
-                        if waypoint.Action == Enum.PathWaypointAction.Jump then
-                            currentHumanoid.Jump = true
-                        end
-
-                        -- false = arah world-space, tidak bergantung arah kamera.
-                        if horizontal.Magnitude > 0.05 then
-                            currentHumanoid:Move(horizontal.Unit, false)
-                        else
-                            currentHumanoid:Move(Vector3.zero, false)
-                        end
-                    end
-                else
-                    currentHumanoid:Move(Vector3.zero, false)
-                end
-
-                task.wait(0.035)
-            end
-        end, debug.traceback)
-
-        -- Selalu hentikan gerakan dan pulihkan state, termasuk jika loop error.
-        tpStopMovement()
-        tpRestoreHumanoid()
-        tpClearPath()
-
-        if not ok then
-            warn("[TP BEHIND] " .. tostring(err))
-        end
-
-        if TPRunId == thisRun then
+        if not humanoid then
             TP_ACTIVE = false
             AutoTP = false
+            return
         end
+
+        TP_ORIGINAL_WALKSPEED = humanoid.WalkSpeed
+        humanoid.WalkSpeed = TP_MOVE_SPEED
+        humanoid.AutoRotate = true
+
+        local currentWaypointIndex = 1
+        local waypoints = {}
+        local currentTarget
+        local lastProgressPosition
+        local lastProgressTime = os.clock()
+
+        local function running()
+            return Running
+                and TP_ACTIVE
+                and AutoTP
+                and TPRunId == thisRun
+        end
+
+        local function getCurrentMob()
+            local mob = getTPTarget()
+
+            if not mob or not mob.Parent or isDead(mob) then
+                return nil
+            end
+
+            local mobRoot = getMobRoot(mob)
+
+            if not mobRoot then return nil end
+
+            return mob, mobRoot
+        end
+
+        local function makeNewPath(mobRoot, root)
+            local goal = tpGetBehindPosition(mobRoot)
+            local path = tpComputePath(root.Position, goal)
+
+            if not path then return false end
+
+            TP_CURRENT_PATH = path
+            TP_BLOCKED = false
+
+            waypoints = path:GetWaypoints()
+            currentWaypointIndex = math.min(2, #waypoints)
+
+            TP_LAST_GOAL = goal
+            lastProgressPosition = root.Position
+            lastProgressTime = os.clock()
+
+            path.Blocked:Connect(function(blockedIndex)
+                if blockedIndex >= currentWaypointIndex then
+                    TP_BLOCKED = true
+                end
+            end)
+
+            return #waypoints > 0
+        end
+
+        while running() do
+            local character, currentHumanoid, root = tpGetCharacter()
+
+            if not character then
+                task.wait(0.3)
+                continue
+            end
+
+            if TP_DODGE_PAUSED then
+                tpReleaseKeys()
+
+                pcall(function()
+                    currentHumanoid:Move(Vector3.zero, false)
+                end)
+
+                task.wait(0.035)
+                continue
+            end
+
+            currentHumanoid.WalkSpeed = TP_MOVE_SPEED
+
+            local mob, mobRoot = getCurrentMob()
+
+            if not mob or not mobRoot then
+                tpStopMovement()
+                currentTarget = nil
+                waypoints = {}
+                task.wait(0.2)
+                continue
+            end
+
+            if currentTarget and currentTarget ~= mob then
+                local oldRoot = getMobRoot(currentTarget)
+
+                if oldRoot and currentTarget.Parent and not isDead(currentTarget) then
+                    mob = currentTarget
+                    mobRoot = oldRoot
+                else
+                    currentTarget = mob
+                    waypoints = {}
+                end
+            else
+                currentTarget = mob
+            end
+
+            local goal = tpGetBehindPosition(mobRoot)
+
+            local needRepath =
+                #waypoints == 0
+                or currentWaypointIndex > #waypoints
+                or TP_BLOCKED
+                or not TP_LAST_GOAL
+                or (goal - TP_LAST_GOAL).Magnitude >= TP_REPATH_DISTANCE
+                or (os.clock() - (TP_LAST_REPATH or 0)) >= TP_REPATH_INTERVAL
+
+            if lastProgressPosition then
+                if (root.Position - lastProgressPosition).Magnitude >= 0.6 then
+                    lastProgressPosition = root.Position
+                    lastProgressTime = os.clock()
+                elseif os.clock() - lastProgressTime >= TP_STUCK_TIME then
+                    needRepath = true
+                    lastProgressPosition = root.Position
+                    lastProgressTime = os.clock()
+                end
+            end
+
+            if needRepath then
+                tpReleaseKeys()
+
+                if makeNewPath(mobRoot, root) then
+                    TP_LAST_REPATH = os.clock()
+                end
+            end
+
+            local waypoint = waypoints[currentWaypointIndex]
+
+            if waypoint then
+                local difference = waypoint.Position - root.Position
+                local distance = difference.Magnitude
+
+                if distance <= TP_ARRIVAL_DISTANCE then
+                    tpReleaseKeys()
+                    currentWaypointIndex += 1
+                else
+                    if waypoint.Action == Enum.PathWaypointAction.Jump then
+                        currentHumanoid.Jump = true
+                    end
+
+                    tpFaceDirection(difference)
+                    tpKeyW(true)
+                end
+            else
+                tpReleaseKeys()
+                task.wait(0.1)
+            end
+
+            task.wait(0.035)
+        end
+
+        tpStopMovement()
+
+        local _, finalHumanoid = tpGetCharacter()
+
+        if finalHumanoid and TP_ORIGINAL_WALKSPEED then
+            finalHumanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
+        end
+
+        TP_ORIGINAL_WALKSPEED = nil
     end)
 end
 
@@ -3492,40 +3499,12 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Delta / executor: utamakan gethui(), lalu CoreGui, terakhir PlayerGui.
--- Setiap parent dicoba terpisah agar kegagalan satu metode tidak menghentikan GUI.
-local guiParented = false
+local guiOK = pcall(function()
+    Gui.Parent = CoreGui
+end)
 
-if type(gethui) == "function" then
-    local ok, hiddenGui = pcall(gethui)
-    if ok and hiddenGui then
-        guiParented = pcall(function()
-            Gui.Parent = hiddenGui
-        end) and Gui.Parent ~= nil
-    end
-end
-
-if not guiParented then
-    local ok = pcall(function()
-        Gui.Parent = CoreGui
-    end)
-    guiParented = ok and Gui.Parent ~= nil
-end
-
-if not guiParented then
-    local ok, playerGui = pcall(function()
-        return Player:WaitForChild("PlayerGui", 10)
-    end)
-    if ok and playerGui then
-        local parentOK = pcall(function()
-            Gui.Parent = playerGui
-        end)
-        guiParented = parentOK and Gui.Parent ~= nil
-    end
-end
-
-if not guiParented then
-    error("[ANIME FORGING] Tidak bisa memasang GUI ke gethui/CoreGui/PlayerGui.")
+if not guiOK or not Gui.Parent then
+    Gui.Parent = Player:WaitForChild("PlayerGui")
 end
 
 local Camera = Workspace.CurrentCamera
@@ -3541,10 +3520,16 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
 corner.Parent = Main
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(110, 75, 190)
-stroke.Thickness = 1.5
-stroke.Parent = Main
+local function SafeStroke(parent, color, thickness)
+    pcall(function()
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = color
+        stroke.Thickness = thickness
+        stroke.Parent = parent
+    end)
+end
+
+SafeStroke(Main, Color3.fromRGB(110, 75, 190), 1.5)
 
 --============================================================
 -- RESPONSIVE SIZE
@@ -3717,10 +3702,7 @@ local function makeInput(placeholder, value)
     c.CornerRadius = UDim.new(0, 7)
     c.Parent = box
 
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = Color3.fromRGB(85, 75, 115)
-    inputStroke.Thickness = 1
-    inputStroke.Parent = box
+    SafeStroke(box, Color3.fromRGB(85, 75, 115), 1)
 
     return box
 end
@@ -3950,10 +3932,7 @@ local MiniCorner = Instance.new("UICorner")
 MiniCorner.CornerRadius = UDim.new(1, 0)
 MiniCorner.Parent = MiniIcon
 
-local MiniStroke = Instance.new("UIStroke")
-MiniStroke.Color = Color3.fromRGB(125, 75, 220)
-MiniStroke.Thickness = 2
-MiniStroke.Parent = MiniIcon
+SafeStroke(MiniIcon, Color3.fromRGB(125, 75, 220), 2)
 
 Min.Activated:Connect(function()
     if not Running then return end
@@ -4122,8 +4101,14 @@ function Controller.Cleanup()
     stopAntiVoid()
     releaseAllKeys()
     tpStopMovement()
-    tpRestoreHumanoid()
-    tpClearPath()
+
+    local _, finalHumanoid = tpGetCharacter()
+
+    if finalHumanoid and TP_ORIGINAL_WALKSPEED then
+        finalHumanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
+    end
+
+    TP_ORIGINAL_WALKSPEED = nil
 
     DungeonOwnsTP = false
     EclipseOwnsTP = false
