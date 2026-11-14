@@ -70,9 +70,24 @@ local DungeonConfig = require(
     SwordShared:WaitForChild("DungeonConfig")
 )
 
-local Mastery = require(
-    SwordShared:WaitForChild("Mastery")
-)
+--============================================================
+-- MASTERY | DELTA SAFE
+--============================================================
+
+local Mastery = nil
+
+do
+    local masteryModule = SwordShared:FindFirstChild("Mastery")
+
+    if masteryModule and masteryModule:IsA("ModuleScript") then
+        local ok, result = pcall(require, masteryModule)
+
+        if ok and type(result) == "table"
+            and type(result.of) == "function" then
+            Mastery = result
+        end
+    end
+end
 
 --============================================================
 -- PROGRESSION MODULE
@@ -160,7 +175,7 @@ local EclipseTarget = nil
 local EclipseInRun = false
 local EclipseOrbitActive = false
 local EclipseOrbitRunId = 0
-local EclipseOrbitOldSpeed = nil
+local EclipseOrbitOldSpeed = 1.5
 local EclipseOrbitAngle = 0
 local EclipseReturnAt = 0
 local EclipseLastMove = 0
@@ -621,19 +636,45 @@ local function stopTP()
     TP_DODGE_PAUSED = false
 
     TPRunId += 1
-    tpStopMovement()
 
+    -- Lepaskan semua tombol movement
+    local vim = game:GetService("VirtualInputManager")
+
+    for _, key in ipairs({
+        Enum.KeyCode.W,
+        Enum.KeyCode.A,
+        Enum.KeyCode.S,
+        Enum.KeyCode.D,
+        Enum.KeyCode.Space
+    }) do
+        pcall(function()
+            vim:SendKeyEvent(false, key, false, game)
+        end)
+    end
+
+    -- Pulihkan karakter
     local _, humanoid = tpGetCharacter()
 
-    if humanoid and TP_ORIGINAL_WALKSPEED then
-        humanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
+    if humanoid then
+        humanoid:Move(Vector3.zero, false)
+        humanoid.Jump = false
+
+        if TP_ORIGINAL_WALKSPEED then
+            humanoid.WalkSpeed = TP_ORIGINAL_WALKSPEED
+        end
+
+        if TP_ORIGINAL_AUTOROTATE ~= nil then
+            humanoid.AutoRotate = TP_ORIGINAL_AUTOROTATE
+        end
     end
 
     TP_ORIGINAL_WALKSPEED = nil
+    TP_ORIGINAL_AUTOROTATE = nil
+
     TP_CURRENT_PATH = nil
     TP_LAST_GOAL = nil
+    TP_BLOCKED = false
 end
-
 local function startTP()
     if TP_ACTIVE then return end
 
@@ -2743,10 +2784,10 @@ end
 --============================================================
 
 local ECLIPSE_ORBIT = {
-    WALK_SPEED = 30,
-    RADIUS = 8,
+    WALK_SPEED = 50,
+    RADIUS = 15,
     ANGULAR_SPEED = 1.55,
-    UPDATE_INTERVAL = 0.22,
+    UPDATE_INTERVAL = 0.1,
 }
 
 local function stopEclipseOrbit()
@@ -3361,7 +3402,7 @@ task.wait(2)
 updateCharacter()
 
 local WORLD2_POS1 = Vector3.new(
-   -0.013201752677559853, 4014.997802734375, -118.85517883300781
+   118.58525085449219, 4003.597900390625, 21.886714935302734
 )
 
 status("Menuju posisi 1...")
@@ -3520,16 +3561,10 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
 corner.Parent = Main
 
-local function SafeStroke(parent, color, thickness)
-    pcall(function()
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = color
-        stroke.Thickness = thickness
-        stroke.Parent = parent
-    end)
-end
-
-SafeStroke(Main, Color3.fromRGB(110, 75, 190), 1.5)
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(110, 75, 190)
+stroke.Thickness = 1.5
+stroke.Parent = Main
 
 --============================================================
 -- RESPONSIVE SIZE
@@ -3702,7 +3737,10 @@ local function makeInput(placeholder, value)
     c.CornerRadius = UDim.new(0, 7)
     c.Parent = box
 
-    SafeStroke(box, Color3.fromRGB(85, 75, 115), 1)
+    local inputStroke = Instance.new("UIStroke")
+    inputStroke.Color = Color3.fromRGB(85, 75, 115)
+    inputStroke.Thickness = 1
+    inputStroke.Parent = box
 
     return box
 end
@@ -3932,7 +3970,10 @@ local MiniCorner = Instance.new("UICorner")
 MiniCorner.CornerRadius = UDim.new(1, 0)
 MiniCorner.Parent = MiniIcon
 
-SafeStroke(MiniIcon, Color3.fromRGB(125, 75, 220), 2)
+local MiniStroke = Instance.new("UIStroke")
+MiniStroke.Color = Color3.fromRGB(125, 75, 220)
+MiniStroke.Thickness = 2
+MiniStroke.Parent = MiniIcon
 
 Min.Activated:Connect(function()
     if not Running then return end
