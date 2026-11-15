@@ -42,14 +42,9 @@ local SHOP_POSITION = Vector3.new(
 
 local PRIORITY = {
     "GemStash",
-    "Crate",
     "PowerPotion",
-    "GoldPotion",
     "MegaPotion",
-    "GoldBag",
-    "CoreBox",
-    "Scroll",
-    "AuraElixir",
+    "Scroll", 
 }
 
 local PriorityIndex = {}
@@ -363,23 +358,22 @@ local function createRow(key, order)
     }
 end
 
+
 local function getItems(kit)
     local result = {}
 
-    for _, item in ipairs(kit.Shop.List) do
-        if item.Stock then
-            table.insert(result, item)
+    for _, key in ipairs(PRIORITY) do
+        for _, item in ipairs(kit.Shop.List) do
+            if item.Key == key and item.Stock then
+                table.insert(result, item)
+                break
+            end
         end
     end
 
-    table.sort(result, function(a, b)
-        local ai = PriorityIndex[a.Key] or 999
-        local bi = PriorityIndex[b.Key] or 999
-        return ai < bi
-    end)
-
     return result
 end
+
 
 local CurrentKit
 local CurrentItems = {}
