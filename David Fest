@@ -1987,7 +1987,7 @@ local function finishBossPhase(id)
             end
 
             local emptyFor = os.clock() - emptySince
-            if emptyFor >= 2 then
+            if emptyFor >= 5 then
                 break
             end
             status("Enemies kosong | Konfirmasi " .. string.format("%.1f", emptyFor) .. "/5 detik")
