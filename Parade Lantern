@@ -45,7 +45,7 @@ local MODE_CONFIG = {
         POS1 = Vector3.new(0.0000027975256671197712, 4014.997802734375, -116),
         POS2 = Vector3.new(-0.42467841506004333, 4018.31787109375, -128.8373565673828),
         DUNGEON = "X7",
-        COUNT = 50,
+        COUNT = 19,
         BOSS = "Aurelion",
         BLOCK_CHECK = Vector3.new(4530, 4019.497802734375, -3418.3642578125),
         BLOCK_TP = Vector3.new(4530.7880859375, 4018.997802734375, -3433.88330078125),
@@ -116,16 +116,16 @@ local CurrentDungeonTarget = nil
 
 local SKILLS = {"Q", "E", "R", "F"}
 
-local SWING_DELAY = 0
+local SWING_DELAY = 0.05
 local SKILL_DELAY = 0.5
 local BLOCK_RADIUS = 5
-local FLOOR_GLOW_RADIUS = 2
+local FLOOR_GLOW_RADIUS = 3
 
 -- Boss orbit
 local BOSS_ORBIT_RADIUS = 15
-local BOSS_ORBIT_SPEED = 2
+local BOSS_ORBIT_SPEED = 1.5
 local BOSS_ORBIT_HEIGHT = 5
-local BOSS_RUN_SPEED = 35
+local BOSS_RUN_SPEED = 50
 
 --============================================================
 -- STATE
@@ -158,6 +158,8 @@ local EclipseSavedX7 = false
 local EclipseSavedCombat = false
 local EclipseSavedSkill = false
 local EclipseSavedDodge = false
+local EclipseSavedCFrame = nil
+local EclipseSavedWorld = nil
 
 local startMode
 
@@ -184,18 +186,17 @@ local ToggleButtons = {}
 
 local ToggleStates = {
     ["AUTO FEST"] = false,
-    ["AUTO DUNGEON"] = false,
+    ["AUTO X7"] = false,
     ["SWING + HIT"] = false,
     ["AUTO SKILL"] = false,
     ["AUTO DODGE"] = false,
     ["AUTO ECLIPSE"] = false,
     ["AUTO CLAIM"] = false,
     ["AUTO ENCHANT"] = false,
-    ["AUTO ORBIT"] = false,
 }
 
-local CLAIM_INTERVAL = 10
-local ENCHANT_INTERVAL = 0
+local CLAIM_INTERVAL = 300
+local ENCHANT_INTERVAL = 0.05
 
 --============================================================
 -- CHARACTER
@@ -466,6 +467,8 @@ local function startAutoPath()
         local lastMoveCommand = 0
         local currentDestination = nil
         local pathBlockedConnection = nil
+        local lastProgressPosition = nil
+        local lastProgressTime = os.clock()
 
         local function clearPath()
             waypoints = nil
@@ -520,6 +523,30 @@ local function startAutoPath()
             end
 
             local distance = (Root.Position - targetRoot.Position).Magnitude
+
+            -- Recovery jika karakter tidak bergerak mendekati target.
+            -- Jarak 59 studs bukan batas berhenti; watchdog ini mendeteksi
+            -- MoveTo/path yang macet lalu memaksa hitung jalur ulang.
+            if not lastProgressPosition then
+                lastProgressPosition = Root.Position
+                lastProgressTime = os.clock()
+            elseif (Root.Position - lastProgressPosition).Magnitude >= 2.5 then
+                lastProgressPosition = Root.Position
+                lastProgressTime = os.clock()
+            elseif distance > 10 and os.clock() - lastProgressTime >= 2.8 then
+                clearPath()
+                lastCompute = 0
+                currentDestination = nil
+                lastProgressPosition = Root.Position
+                lastProgressTime = os.clock()
+                Humanoid.Jump = true
+                Humanoid:MoveTo(targetRoot.Position)
+                status("AUTO PATH | Jalur macet, mencari jalan ulang | "
+                    .. math.floor(distance) .. " studs")
+                task.wait(0.12)
+                continue
+            end
+
             if distance <= 7 then
                 Humanoid:MoveTo(Root.Position)
                 clearPath()
@@ -731,83 +758,6 @@ local function moveToPosition(position, isActive, label, stopDistance)
 end
 
 --============================================================
--- BOSS HELPERS
---============================================================
-
-local function bossNameMatches(name)
-    local wanted = string.lower(tostring(ActiveConfig.BOSS or ""))
-    local actual = string.lower(tostring(name or ""))
-
-    if wanted == "" or actual == "" then
-        return false
-    end
-
-    return actual == wanted
-        or string.find(actual, wanted, 1, true) ~= nil
-        or string.find(wanted, actual, 1, true) ~= nil
-end
-
-local function getBoss()
-    local enemies = Workspace:FindFirstChild("Enemies")
-    if not enemies then return nil end
-
-    local direct = enemies:FindFirstChild(ActiveConfig.BOSS)
-    if direct and direct:IsA("Model") and not isDead(direct) then
-        return direct
-    end
-
-    for _, mob in ipairs(enemies:GetChildren()) do
-        if mob:IsA("Model")
-            and bossNameMatches(mob.Name)
-            and not isDead(mob) then
-
-            return mob
-        end
-    end
-
-    return nil
-end
-
-local function getBossHealth(boss)
-    if not boss then return nil end
-
-    local hum = boss:FindFirstChildOfClass("Humanoid")
-    if hum then return hum.Health end
-
-    local health = boss:FindFirstChild("Health")
-
-    if health and (health:IsA("NumberValue") or health:IsA("IntValue")) then
-        return health.Value
-    end
-
-    local attribute = boss:GetAttribute("Health")
-
-    if typeof(attribute) == "number" then
-        return attribute
-    end
-
-    return nil
-end
-
-local function activateBossPhaseDodge()
-    if EclipsePaused or EclipsePriority or EclipseInRun then
-        AutoDodge = false
-        setToggle("AUTO DODGE", false)
-        return
-    end
-
-    if ActiveMode == "FEST" then
-        AutoDodge = true
-        setToggle("AUTO DODGE", true)
-        status("The Parade Master | Boss Dodge ON")
-    else
-        AutoDodge = false
-        setToggle("AUTO DODGE", false)
-        status("X7 Boss | Dodge OFF")
-    end
-end
-
---============================================================
 -- FLOOR GLOW
 --============================================================
 
@@ -825,15 +775,6 @@ local function moveToFloorGlow(id)
     local lastMove = 0
 
     while alive(id) and not BossPhaseActive do
-        local spawnedBoss = getBoss()
-
-        if spawnedBoss then
-            BossPhaseActive = true
-            BossPhaseDelayDone = false
-            activateBossPhaseDodge()
-            break
-        end
-
         updateCharacter()
 
         if not Root or not Humanoid or Humanoid.Health <= 0 then
@@ -1267,15 +1208,15 @@ task.spawn(function()
 end)
 
 --============================================================
--- BOSS ORBIT MOVEMENT
+-- ORBIT MOVEMENT | FEST/X7 = ENEMIES | ECLIPSE = UMBRA ONLY
 --============================================================
 
 local BossOrbitRunning = false
 
-local function startBossOrbit(id, boss)
+local function startBossOrbit(id, initialTarget, orbitMode)
     if BossOrbitRunning then return end
     BossOrbitRunning = true
-    setToggle("AUTO ORBIT", true)
+    orbitMode = orbitMode or "DUNGEON"
 
     task.spawn(function()
         local angle = 0
@@ -1284,35 +1225,34 @@ local function startBossOrbit(id, boss)
         local lastJump = 0
         local direction = 1
         local oldSpeed
-        local target = boss
+        local target = initialTarget
+
+        local function orbitActive()
+            if orbitMode == "ECLIPSE" then
+                return Running and EclipseInRun and EclipseRunId == id
+                    and AutoEclipse and target and target.Parent and not isDead(target)
+            end
+            return alive(id) and BossPhaseActive
+        end
 
         local function getOrbitTarget()
-            -- Prioritas: boss hidup. Jika nama/struktur boss tidak cocok,
-            -- orbit tetap bisa memakai model musuh hidup di folder Enemies.
+            if orbitMode == "ECLIPSE" then
+                local enemies = Workspace:FindFirstChild("Enemies")
+                local umbra = enemies and enemies:FindFirstChild("Umbra the Sun-Eater")
+                if umbra and umbra:IsA("Model") and not isDead(umbra)
+                    and getMobRoot(umbra) then
+                    target = umbra
+                    return umbra
+                end
+                return nil
+            end
+
             if target and target.Parent and not isDead(target) and getMobRoot(target) then
                 return target
             end
 
-            local folder = Workspace:FindFirstChild("Enemies")
-            if not folder then return nil end
-
-            local fallback
-            for _, mob in ipairs(folder:GetChildren()) do
-                if mob:IsA("Model") and not isDead(mob) and getMobRoot(mob) then
-                    if bossNameMatches(mob.Name) then
-                        target = mob
-                        return mob
-                    end
-                    fallback = fallback or mob
-                end
-            end
-
-            if fallback then
-                target = fallback
-                return fallback
-            end
-
-            return nil
+            target = getNearestMob()
+            return target
         end
 
         local function getFloorPosition(candidate, char, mob)
@@ -1331,21 +1271,22 @@ local function startBossOrbit(id, boss)
                 or result.Material == Enum.Material.Water then
                 return nil
             end
-
             return result.Position
         end
 
-        while alive(id) and BossPhaseActive do
+        while orbitActive() do
             updateCharacter()
-            if not Character or not Root or not Humanoid then
-                task.wait(0.2)
+            if not Character or not Root or not Humanoid or Humanoid.Health <= 0 then
+                task.wait(0.15)
                 continue
             end
 
             local currentTarget = getOrbitTarget()
             if not currentTarget then
-                status("Boss Orbit | Menunggu boss di workspace.Enemies...")
-                task.wait(0.2)
+                status(orbitMode == "ECLIPSE"
+                    and "ECLIPSE ORBIT | Menunggu Umbra..."
+                    or "BOSS ORBIT | Menunggu target di workspace.Enemies...")
+                task.wait(0.15)
                 continue
             end
 
@@ -1358,38 +1299,36 @@ local function startBossOrbit(id, boss)
             if oldSpeed == nil then oldSpeed = Humanoid.WalkSpeed end
             Humanoid.WalkSpeed = 50
 
-            -- Tunggu server memindahkan pemain dari FloorGlow ke Boss Room.
-            -- Tidak ada teleport atau MoveTo mengejar boss dari FloorGlow.
             local distance = (Root.Position - mobRoot.Position).Magnitude
             if distance > 40 then
-                status("Menunggu masuk Boss Room | " .. math.floor(distance) .. " studs")
+                status((orbitMode == "ECLIPSE" and "UMBRA ORBIT" or "BOSS ORBIT")
+                    .. " | Menunggu dekat target | " .. math.floor(distance) .. " studs")
                 task.wait(0.12)
                 lastClock = os.clock()
                 continue
             end
 
-            status("Boss Orbit: " .. currentTarget.Name)
+            status((orbitMode == "ECLIPSE" and "UMBRA ORBIT: " or "BOSS ORBIT: ")
+                .. currentTarget.Name)
 
             local now = os.clock()
             local dt = math.min(now - lastClock, 0.25)
             lastClock = now
-            angle = angle + (BOSS_ORBIT_SPEED * dt * direction)
+            angle += 2 * dt * direction
 
-            -- Auto jump setiap 1.1 detik seperti standalone orbit.
             if now - lastJump >= 1.1 then
                 Humanoid.Jump = true
                 lastJump = now
             end
 
             if now - lastMove >= 0.12 then
-                local center = mobRoot.Position
-                local candidate = center + Vector3.new(
-                    math.cos(angle) * BOSS_ORBIT_RADIUS,
+                local candidate = mobRoot.Position + Vector3.new(
+                    math.cos(angle) * 15,
                     0,
-                    math.sin(angle) * BOSS_ORBIT_RADIUS
+                    math.sin(angle) * 15
                 )
-
                 local floorPosition = getFloorPosition(candidate, Character, currentTarget)
+
                 if floorPosition then
                     local destination = floorPosition + Vector3.new(
                         0,
@@ -1398,13 +1337,11 @@ local function startBossOrbit(id, boss)
                     )
                     Humanoid:MoveTo(destination)
                 else
-                    direction = direction * -1
-                    angle = angle + direction * 0.7
+                    direction *= -1
+                    angle += direction * 0.7
                 end
-
                 lastMove = now
             end
-
             task.wait(0.035)
         end
 
@@ -1414,10 +1351,16 @@ local function startBossOrbit(id, boss)
             Humanoid.Jump = false
             if oldSpeed then Humanoid.WalkSpeed = oldSpeed end
         end
-
         BossOrbitRunning = false
-        setToggle("AUTO ORBIT", false)
     end)
+end
+
+local function stopBossOrbit()
+    BossPhaseActive = false
+    local deadline = os.clock() + 3
+    while BossOrbitRunning and os.clock() < deadline do
+        task.wait(0.05)
+    end
 end
 
 --============================================================
@@ -1425,8 +1368,9 @@ end
 --============================================================
 
 local function setAutoDodge(enabled)
-    AutoDodge = enabled and true or false
-    setToggle("AUTO DODGE", AutoDodge)
+    -- Dodge tidak dipakai oleh AUTO FEST, AUTO X7, maupun AUTO ECLIPSE.
+    AutoDodge = false
+    setToggle("AUTO DODGE", false)
 end
 
 local function setFestCombat(enabled)
@@ -1516,22 +1460,14 @@ local function teleportToUmbra(mob)
     end)
 end
 
-local function teleportEclipsePosition(position)
-    updateCharacter()
-    if not Root then return false end
-
-    return pcall(function()
-        Root.CFrame = CFrame.new(position + Vector3.new(0, 3, 0))
-        Root.AssemblyLinearVelocity = Vector3.zero
-        Root.AssemblyAngularVelocity = Vector3.zero
-    end)
-end
-
 local function pauseModesForEclipse()
     if EclipsePaused then return end
 
     EclipseSavedFest = AutoFest
     EclipseSavedX7 = AutoX7
+    updateCharacter()
+    EclipseSavedCFrame = Root and Root.CFrame or nil
+    EclipseSavedWorld = tonumber(Player:GetAttribute("World")) or 1
 
     EclipsePaused = true
     EclipsePriority = true
@@ -1549,6 +1485,7 @@ local function pauseModesForEclipse()
     end
 
     stopAutoPath()
+    stopBossOrbit()
     stopCombat()
     stopSkill()
     setAutoDodge(false)
@@ -1612,6 +1549,8 @@ local function restoreModesAfterEclipse()
     EclipseSavedCombat = false
     EclipseSavedSkill = false
     EclipseSavedDodge = false
+    EclipseSavedCFrame = nil
+    EclipseSavedWorld = nil
 
     status("ECLIPSE SELESAI | Mode sebelumnya restart")
 end
@@ -1874,7 +1813,8 @@ local function startEclipse()
 
                 startCombat()
                 startSkill()
-                setAutoDodge(true)
+                setAutoDodge(false)
+                startBossOrbit(id, umbra, "ECLIPSE")
 
                 setToggle("SWING + HIT", true)
                 setToggle("AUTO SKILL", true)
@@ -1885,6 +1825,7 @@ local function startEclipse()
                     task.wait(0.2)
                 end
 
+                stopBossOrbit()
                 if not eclipseAlive() then break end
 
                 eclipseStatus("Umbra tumbang | Menunggu model hilang...")
@@ -1953,32 +1894,32 @@ local function startEclipse()
 
             eclipseStatus("Berhasil keluar dari Eclipse")
 
-            if targetWorld == 1 then
+            if not eclipseAlive() then break end
+
+            local returnWorld = EclipseSavedWorld
+            if returnWorld and (tonumber(Player:GetAttribute("World")) or 1) ~= returnWorld then
+                eclipseStatus("Kembali ke World sebelum Eclipse...")
                 local travelled = false
-
                 while eclipseAlive() and not travelled do
-                    travelled = waitWorld(2)
-
-                    if not travelled then
-                        task.wait(2)
-                    end
+                    travelled = waitWorld(returnWorld)
+                    if not travelled then task.wait(2) end
                 end
             end
 
             if not eclipseAlive() then break end
+            task.wait(1)
 
-            task.wait(2)
+            if EclipseSavedCFrame then
+                updateCharacter()
+                if Root then
+                    eclipseStatus("Kembali ke posisi sebelum Eclipse...")
+                    Root.CFrame = EclipseSavedCFrame
+                    Root.AssemblyLinearVelocity = Vector3.zero
+                    Root.AssemblyAngularVelocity = Vector3.zero
+                end
+            end
 
-            local world2Position = Vector3.new(
-                0,
-                4003.497802734375,
-                24.5
-            )
-
-            eclipseStatus("Menuju posisi World 2...")
-            teleportEclipsePosition(world2Position)
-
-            task.wait(3)
+            task.wait(1)
 
             if not eclipseAlive() then break end
 
@@ -2000,214 +1941,93 @@ local function startEclipse()
 end
 
 --============================================================
--- WAIT BOSS DEFEATED
+-- FINISH BOSS PHASE
 --============================================================
 
-local function waitBossDefeated(id)
-    status("Menunggu " .. tostring(ActiveConfig.BOSS) .. "...")
-
-    local boss
-    local confirmedAlive = false
-    local waitStarted = os.clock()
-    local emptySince = nil
-    local spawnGrace = 12 -- beri waktu boss muncul setelah FloorGlow
-    local emptyConfirm = 1.5
-
-    local function enemiesAreEmpty()
-        local folder = Workspace:FindFirstChild("Enemies")
-        if not folder then return false end
-        return #folder:GetChildren() == 0
-    end
-
-    -- Fase awal: cari boss, tetapi jangan menunggu selamanya jika boss
-    -- sudah mati/hilang sebelum script sempat menangkap modelnya.
-    while alive(id) do
-        boss = getBoss()
-
-        if boss and boss.Parent then
-            local hp = getBossHealth(boss)
-            if hp ~= nil and hp <= 0 then
-                status("Boss HP 0 | BOSS KALAH!")
-                return true
-            end
-
-            confirmedAlive = true
-            break
-        end
-
-        if enemiesAreEmpty() then
-            emptySince = emptySince or os.clock()
-            if os.clock() - waitStarted >= spawnGrace
-                and os.clock() - emptySince >= emptyConfirm then
-                status("workspace.Enemies kosong | Boss dianggap selesai")
-                return true
-            end
-        else
-            emptySince = nil
-        end
-
-        task.wait(0.15)
-    end
-
-    if not alive(id) then return false end
-
-    status("Boss ditemukan | Menunggu posisi Boss Room...")
-    startBossOrbit(id, boss)
-
-    while alive(id) do
-        if not boss or not boss.Parent then
-            if confirmedAlive then
-                status("Boss menghilang | Dianggap kalah")
-                return true
-            end
-
-            boss = getBoss()
-            if not boss then
-                if enemiesAreEmpty() then
-                    emptySince = emptySince or os.clock()
-                    if os.clock() - emptySince >= emptyConfirm then
-                        status("workspace.Enemies kosong | Boss dianggap selesai")
-                        return true
-                    end
-                else
-                    emptySince = nil
-                end
-                task.wait(0.15)
-                continue
-            end
-
-            startBossOrbit(id, boss)
-        end
-
-        local hp = getBossHealth(boss)
-        if hp ~= nil then
-            if hp <= 0 then
-                status("Boss HP 0 | BOSS KALAH!")
-                return true
-            end
-            confirmedAlive = true
-        end
-
-        task.wait(0.15)
-    end
-
-    return false
-end
-
---==================================================
--- BOSS PHASE | ORBIT + ENEMIES EMPTY 5 SECONDS
--- NO BOSS NAME DETECTION
--- NO FLOOR GLOW SEARCH AFTER TELEPORT
---==================================================
-
 local function finishBossPhase(id)
-    if not alive(id) then return false end
+    if not BossPhaseActive then return false end
 
-    -- FLOOR GLOW SUDAH DICAPAI
-    -- STOP DODGE DAN AUTO PATH
-    setAutoDodge(false)
     stopAutoPath()
+    setAutoDodge(false)
 
-    -- AKTIFKAN ORBIT LANGSUNG, TANPA MENUNGGU NAMA BOSS
-    BossPhaseActive = true
-    BossPhaseDelayDone = true
+    -- Orbit langsung aktif setelah TP FloorGlow. Tidak mencari FloorGlow lagi.
+    startBossOrbit(id, nil, "DUNGEON")
+    status("FloorGlow selesai | Orbit aktif, menunggu Enemies...")
 
-    setToggle("AUTO ORBIT", true)
-    startBossOrbit(id, nil)
-
-    status("FLOOR GLOW SELESAI | AUTO ORBIT AKTIF")
-
-    -- TIDAK ADA LAGI PENCARIAN FLOOR GLOW DI FUNGSI INI
-    -- CEK FOLDER ENEMIES SAJA
+    local sawEnemies = false
     local emptySince = nil
 
     while alive(id) do
         local enemies = Workspace:FindFirstChild("Enemies")
+        local enemyCount = enemies and #enemies:GetChildren() or 0
 
-        if enemies then
-            local count = #enemies:GetChildren()
-
-            if count == 0 then
-                if not emptySince then
-                    emptySince = os.clock()
-                    status("ENEMIES KOSONG | MENUNGGU 5 DETIK")
-                end
-
-                local elapsed = os.clock() - emptySince
-
-                if elapsed >= 3 then
-                    break
-                end
-            else
-                emptySince = nil
-                status("AUTO ORBIT AKTIF | ENEMIES: " .. count)
-            end
-        else
-            -- Folder belum ada: jangan dianggap selesai
+        if enemyCount > 0 then
+            sawEnemies = true
             emptySince = nil
-            status("MENUNGGU WORKSPACE.ENEMIES...")
+            status("Orbit aktif | Menunggu boss selesai | Enemies: " .. tostring(enemyCount))
+        elseif sawEnemies then
+            if not emptySince then
+                emptySince = os.clock()
+            end
+
+            local emptyFor = os.clock() - emptySince
+            if emptyFor >= 5 then
+                break
+            end
+            status("Enemies kosong | Konfirmasi " .. string.format("%.1f", emptyFor) .. "/5 detik")
+        else
+            status("Orbit aktif | Menunggu boss/mob muncul di workspace.Enemies...")
         end
 
-        task.wait(0.15)
+        task.wait(0.12)
     end
 
-    if not alive(id) then return false end
-
-    -- ENEMIES KOSONG SELAMA 5 DETIK
-    -- MATIKAN ORBIT
-    BossPhaseActive = false
-    setToggle("AUTO ORBIT", false)
-
-    local stopDeadline = os.clock() + 2
-    while BossOrbitRunning and os.clock() < stopDeadline do
-        task.wait(0.05)
-    end
-
-    if not alive(id) then return false end
-
-    -- CARI BOSSEXIT SAJA
-    local bossExit = getDungeonObject({
-        "Markers",
-        "BossExit"
-    })
-
-    if not bossExit then
-        status("ERROR | BOSSEXIT TIDAK DITEMUKAN")
+    if not alive(id) then
+        stopBossOrbit()
         return false
     end
 
+    -- Combat dan orbit berhenti setelah Enemies kosong 5 detik.
+    setFestCombat(false)
+    stopBossOrbit()
+
+    local bossExit = getDungeonObject({"Markers", "BossExit"})
     local exitPosition = getObjectPosition(bossExit)
 
     if not exitPosition then
-        status("ERROR | POSISI BOSSEXIT TIDAK DITEMUKAN")
+        status("BossExit tidak ditemukan: Workspace.Dungeons."
+            .. tostring(ActiveConfig.DUNGEON) .. ".Markers.BossExit")
         return false
     end
 
     updateCharacter()
-
     if not Root then return false end
 
-    status("ENEMIES KOSONG 5 DETIK | TP BOSSEXIT")
-
+    status("Enemies kosong 5 detik | TP ke BossExit...")
     local oldCF = Root.CFrame
-
     Root.CFrame = CFrame.new(exitPosition + Vector3.new(0, 3, 0))
         * (oldCF - oldCF.Position)
-
     Root.AssemblyLinearVelocity = Vector3.zero
     Root.AssemblyAngularVelocity = Vector3.zero
 
-    task.wait(0.5)
+    task.wait(0.35)
+    updateCharacter()
 
-    if not alive(id) then return false end
+    if not Root or (Root.Position - exitPosition).Magnitude > 10 then
+        status("TP BossExit tidak terkonfirmasi")
+        return false
+    end
 
     BossPhaseActive = false
     BossPhaseDelayDone = false
-    setToggle("AUTO ORBIT", false)
+    IsGoingToFloorGlow = false
+    CurrentDungeonTarget = nil
 
-    status("BOSSEXIT BERHASIL")
+    status(ActiveConfig.DUNGEON .. " berhasil keluar | Siapkan POS1...")
+    task.wait(1)
     return true
 end
+
 --============================================================
 -- RUN ONE DUNGEON
 --============================================================
@@ -2312,15 +2132,6 @@ local function runOneDungeon(id)
             string.find(normalized, "BOSSOPEN", 1, true)
             or string.find(normalized, "OPEN!", 1, true)
 
-        local spawnedBoss = getBoss()
-
-        if spawnedBoss then
-            BossPhaseActive = true
-            BossPhaseDelayDone = false
-            activateBossPhaseDodge()
-            break
-        end
-
         if progressOpen then
             status("BOSS OPEN! Mencari FloorGlow...")
 
@@ -2397,8 +2208,7 @@ local function runOneDungeon(id)
         BossPhaseActive = true
         BossPhaseDelayDone = false
 
-        -- finishBossPhase menunggu 2 detik, lalu menyalakan orbit otomatis.
-        status("FloorGlow tersentuh | Menunggu 2 detik sebelum AUTO ORBIT...")
+        status("FloorGlow tersentuh | Menunggu sistem masuk Boss Room...")
     end
 
     stopAutoPath()
@@ -2436,7 +2246,6 @@ local function stopMode(mode)
     BossPhaseActive = false
     BossPhaseDelayDone = false
     IsGoingToFloorGlow = false
-    setToggle("AUTO ORBIT", false)
 
     updateCharacter()
 
@@ -2526,6 +2335,7 @@ startMode = function(mode)
             return
         end
 
+        setAutoDodge(false)
         ActiveMode = "FEST"
         ActiveConfig = MODE_CONFIG.FEST
         FLOOR_GLOW_POS = ActiveConfig.FLOOR_GLOW
@@ -2602,6 +2412,7 @@ startMode = function(mode)
             return
         end
 
+        setAutoDodge(false)
         ActiveMode = "X7"
         ActiveConfig = selectedConfig
         FLOOR_GLOW_POS = ActiveConfig.FLOOR_GLOW
@@ -2707,8 +2518,8 @@ if not parentOK or not Gui.Parent then
 end
 
 Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(280, 515)
-Main.Position = UDim2.new(0.5, -140, 0.5, -257)
+Main.Size = UDim2.fromOffset(280, 475)
+Main.Position = UDim2.new(0.5, -140, 0.5, -237)
 Main.BackgroundColor3 = Color3.fromRGB(23, 25, 32)
 Main.BorderSizePixel = 0
 Main.Parent = Gui
@@ -2813,7 +2624,7 @@ StarBox.Parent = InputPanel
 Instance.new("UICorner", StarBox).CornerRadius = UDim.new(0, 5)
 
 local ButtonHolder = Instance.new("Frame")
-ButtonHolder.Size = UDim2.new(1, -16, 0, 328)
+ButtonHolder.Size = UDim2.new(1, -16, 0, 291)
 ButtonHolder.Position = UDim2.fromOffset(8, 111)
 ButtonHolder.BackgroundTransparency = 1
 ButtonHolder.Parent = Main
@@ -2832,7 +2643,6 @@ local names = {
     "AUTO ECLIPSE",
     "AUTO CLAIM",
     "AUTO ENCHANT",
-    "AUTO ORBIT",
 }
 
 local function makeToggle(name, order)
@@ -2890,8 +2700,7 @@ local function makeToggle(name, order)
             setToggle(name, value)
 
         elseif name == "AUTO DODGE" then
-            AutoDodge = value
-            setToggle(name, value)
+            setAutoDodge(false)
 
         elseif name == "AUTO ECLIPSE" then
             if value then
@@ -2913,10 +2722,6 @@ local function makeToggle(name, order)
             else
                 stopEnchant()
             end
-
-        elseif name == "AUTO ORBIT" then
-            -- Status dikendalikan otomatis oleh Auto Dungeon.
-            setToggle("AUTO ORBIT", BossOrbitRunning)
         end
     end)
 end
@@ -3035,6 +2840,7 @@ Destroy.MouseButton1Click:Connect(function()
 
     AutoDodge = false
     AutoEclipse = false
+    BossPhaseActive = false
 
     EclipseRunId += 1
     EclipseInRun = false
