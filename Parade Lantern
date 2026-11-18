@@ -29,8 +29,8 @@ local RequestRemote = Remotes:WaitForChild("Request")
 
 local MODE_CONFIG = {
     FEST = {
-        POS1 = Vector3.new(-13.916377067565918, 3998.997802734375, 196.00872802734375),
-        POS2 = Vector3.new(-13.84536361694336, 3999.22802734375, 204.06658935546875),
+        POS1 = Vector3.new(204.60000610351562, 3.1980252265930176, 31.600006103515625),
+        POS2 = Vector3.new(208.82321166992188, 3.428025007247925, 32.27003479003906),
         DUNGEON = "FEST",
         COUNT = 4,
         BOSS = "The Parade Master",
@@ -42,8 +42,8 @@ local MODE_CONFIG = {
     },
 
     X7 = {
-        POS1 = Vector3.new(0.0000027975256671197712, 4014.997802734375, -116),
-        POS2 = Vector3.new(-0.39264875650405884, 4018.31787109375, -130.85308837890625),
+        POS1 = Vector3.new(-0.00010984153777826577, 2.971226453781128, -51.999900817871094),
+        POS2 = Vector3.new(-0.455716073513031, 5.511226654052734, -66.91751861572266),
         DUNGEON = "X7",
         COUNT = 19,
         BOSS = "Aurelion",
@@ -1455,22 +1455,129 @@ local function findUmbra()
     return nil
 end
 
-local function teleportToUmbra(mob)
+-- Eclipse only: jalan menggunakan Pathfinding ke Umbra.
+-- Tidak teleport dan tidak mengganti target ke mob lain.
+local function walkToUmbra(mob, runId, isAlive)
     if not mob or not mob.Parent or isDead(mob) then return false end
 
     updateCharacter()
-    if not Root then return false end
+    if not Root or not Humanoid or Humanoid.Health <= 0 then return false end
 
-    local mobRoot = getMobRoot(mob)
-    if not mobRoot then return false end
+    local oldSpeed = Humanoid.WalkSpeed
+    Humanoid.WalkSpeed = 36
 
-    return pcall(function()
-        local destination = mobRoot.CFrame * CFrame.new(0, 0, 5)
+    local lastCompute = 0
+    local lastTargetPosition = nil
+    local blockedConnection = nil
+    local waypoints = nil
+    local waypointIndex = 1
+    local reached = false
 
-        Root.CFrame = CFrame.lookAt(destination.Position, mobRoot.Position)
-        Root.AssemblyLinearVelocity = Vector3.zero
-        Root.AssemblyAngularVelocity = Vector3.zero
-    end)
+    local function cleanup()
+        if blockedConnection then
+            blockedConnection:Disconnect()
+            blockedConnection = nil
+        end
+        updateCharacter()
+        if Humanoid then
+            Humanoid:MoveTo(Root and Root.Position or Vector3.zero)
+            Humanoid.WalkSpeed = oldSpeed
+        end
+    end
+
+    while Running and EclipseRunId == runId and isAlive()
+        and mob.Parent and not isDead(mob) do
+
+        updateCharacter()
+        if not Root or not Humanoid or Humanoid.Health <= 0 then
+            task.wait(0.15)
+            continue
+        end
+
+        local mobRoot = getMobRoot(mob)
+        if not mobRoot then
+            task.wait(0.15)
+            continue
+        end
+
+        local distance = (Root.Position - mobRoot.Position).Magnitude
+        if distance <= 10 then
+            reached = true
+            break
+        end
+
+        local targetMoved = not lastTargetPosition
+            or (mobRoot.Position - lastTargetPosition).Magnitude >= 8
+        local shouldRecompute = not waypoints
+            or waypointIndex > #waypoints
+            or targetMoved
+            or os.clock() - lastCompute >= 2.5
+
+        if shouldRecompute and os.clock() - lastCompute >= 0.25 then
+            lastCompute = os.clock()
+            lastTargetPosition = mobRoot.Position
+
+            if blockedConnection then
+                blockedConnection:Disconnect()
+                blockedConnection = nil
+            end
+
+            local path = PathfindingService:CreatePath({
+                AgentRadius = 2,
+                AgentHeight = 5,
+                AgentCanJump = true,
+                AgentJumpHeight = 12,
+                AgentMaxSlope = 45,
+                WaypointSpacing = 6,
+            })
+
+            local ok = pcall(function()
+                path:ComputeAsync(Root.Position, mobRoot.Position)
+            end)
+
+            if ok and path.Status == Enum.PathStatus.Success then
+                waypoints = path:GetWaypoints()
+                waypointIndex = math.min(2, #waypoints)
+                blockedConnection = path.Blocked:Connect(function(blockedIndex)
+                    if blockedIndex >= waypointIndex then
+                        waypoints = nil
+                        lastCompute = 0
+                    end
+                end)
+            else
+                -- Fallback tetap berjalan menuju Umbra, bukan teleport.
+                waypoints = nil
+                Humanoid:MoveTo(mobRoot.Position)
+            end
+        end
+
+        local destination = mobRoot.Position
+        local action
+        if waypoints and waypoints[waypointIndex] then
+            destination = waypoints[waypointIndex].Position
+            action = waypoints[waypointIndex].Action
+            if (Root.Position - destination).Magnitude <= 4 then
+                waypointIndex += 1
+                if waypoints[waypointIndex] then
+                    destination = waypoints[waypointIndex].Position
+                    action = waypoints[waypointIndex].Action
+                else
+                    destination = mobRoot.Position
+                end
+            end
+        end
+
+        if action == Enum.PathWaypointAction.Jump then
+            Humanoid.Jump = true
+        end
+
+        Humanoid:MoveTo(destination)
+        status("ECLIPSE | RUN PATH KE UMBRA | " .. math.floor(distance) .. " studs")
+        task.wait(0.12)
+    end
+
+    cleanup()
+    return reached and mob.Parent ~= nil and not isDead(mob)
 end
 
 local function pauseModesForEclipse()
@@ -1815,46 +1922,57 @@ local function startEclipse()
                 EclipseTarget = umbra
                 CurrentDungeonTarget = umbra
 
-                eclipseStatus("Umbra ditemukan | TP ke Umbra...")
+                eclipseStatus("Umbra ditemukan | Pathfinding lari menuju Umbra...")
 
-                if not teleportToUmbra(umbra) then
-                    for _ = 1, 10 do
-                        if not eclipseAlive() or isDead(umbra) then break end
-                        if teleportToUmbra(umbra) then break end
-                        task.wait(0.3)
-                    end
-                end
-
-                startCombat()
-                startSkill()
-                setAutoDodge(false)
-                startBossOrbit(id, umbra, "ECLIPSE")
-
-                setToggle("SWING + HIT", true)
-                setToggle("AUTO SKILL", true)
-
-                eclipseStatus("Combat Umbra aktif...")
-
-                while eclipseAlive() and umbra.Parent and not isDead(umbra) do
-                    task.wait(0.2)
-                end
-
-                stopBossOrbit()
+                local arrived = walkToUmbra(umbra, id, eclipseAlive)
                 if not eclipseAlive() then break end
 
-                eclipseStatus("Umbra tumbang | Menunggu model hilang...")
+                if not arrived and umbra.Parent and not isDead(umbra) then
+                    eclipseStatus("Belum dekat Umbra | lanjut coba path...")
+                    while eclipseAlive() and umbra.Parent and not isDead(umbra) do
+                        if walkToUmbra(umbra, id, eclipseAlive) then
+                            arrived = true
+                            break
+                        end
+                        task.wait(0.2)
+                    end
+                end
 
-                local disappearDeadline = os.clock() + 30
+                if not eclipseAlive() then break end
+                if not umbra.Parent or isDead(umbra) then
+                    eclipseStatus("Umbra tumbang saat perjalanan")
+                else
+                    startCombat()
+                    startSkill()
+                    setAutoDodge(false)
+                    startBossOrbit(id, umbra, "ECLIPSE")
 
-                while eclipseAlive() and os.clock() < disappearDeadline do
-                    local enemies = Workspace:FindFirstChild("Enemies")
+                    setToggle("SWING + HIT", true)
+                    setToggle("AUTO SKILL", true)
 
-                    if not (enemies and enemies:FindFirstChild("Umbra the Sun-Eater")) then
-                        break
+                    eclipseStatus("Combat Umbra aktif...")
+
+                    while eclipseAlive() and umbra.Parent and not isDead(umbra) do
+                        task.wait(0.2)
                     end
 
-                    task.wait(0.15)
-                end
+                    stopBossOrbit()
+                    if not eclipseAlive() then break end
+
+                    eclipseStatus("Umbra tumbang | Menunggu model hilang...")
+
+                    local disappearDeadline = os.clock() + 30
+
+                    while eclipseAlive() and os.clock() < disappearDeadline do
+                        local enemies = Workspace:FindFirstChild("Enemies")
+
+                        if not (enemies and enemies:FindFirstChild("Umbra the Sun-Eater")) then
+                            break
+                        end
+
+                        task.wait(0.15)
+                    end
+                end -- if Umbra masih hidup setelah path
             else
                 eclipseStatus("Umbra tidak ditemukan")
             end
@@ -1987,7 +2105,7 @@ local function finishBossPhase(id)
             end
 
             local emptyFor = os.clock() - emptySince
-            if emptyFor >= 2 then
+            if emptyFor >= 3 then
                 break
             end
             status("Enemies kosong | Konfirmasi " .. string.format("%.1f", emptyFor) .. "/5 detik")
@@ -2019,7 +2137,7 @@ local function finishBossPhase(id)
     updateCharacter()
     if not Root then return false end
 
-    status("Enemies kosong 2 detik | TP ke BossExit...")
+    status("Enemies kosong 3 detik | TP ke BossExit...")
     local oldCF = Root.CFrame
     Root.CFrame = CFrame.new(exitPosition + Vector3.new(0, 3, 0))
         * (oldCF - oldCF.Position)
