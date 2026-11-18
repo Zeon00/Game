@@ -124,11 +124,8 @@ local function resolveX7Config()
         return nil, "Dungeon ID tidak cocok"
     end
 
-    local maxStar = tonumber(entry.MaxStar)
-
-    if maxStar and star > maxStar then
-        return nil, "Maksimal Star " .. dungeonId .. " adalah " .. maxStar
-    end
+    -- Tidak membatasi Star berdasarkan entry.MaxStar.
+    -- Beberapa dungeon mendukung nilai tinggi seperti 50 atau 100.
 
     local config = table.clone(MODE_CONFIG.X7)
 
@@ -814,7 +811,9 @@ local function getActiveFloorGlow()
     return nil
 end
 --============================================================
--- BOSS NOTIFICATION DETECTION
+-- DUNGEON PROGRESS + BOSS NOTIFICATION DETECTION
+-- FEST / X7: Caption OPEN! + Value BOSS -> FLOOR GLOW
+-- ALL MODES: Title BOSS DEFEATED! -> BOSS EXIT
 --============================================================
 
 local BossDoorOpenedSignal = false
@@ -822,8 +821,8 @@ local BossDefeatedSignal = false
 
 local LastBossTitleObject = nil
 local LastBossTitleText = ""
-local LastBossLineObject = nil
-local LastBossLineText = ""
+local BossDefeatedSignalPending = false
+local BossSignalGeneration = 0
 
 local function getNotifyLabels()
     local feed = PlayerGui:FindFirstChild("NotifyFeed")
@@ -831,69 +830,82 @@ local function getNotifyLabels()
     local slide = card and card:FindFirstChild("Card")
     slide = slide and slide:FindFirstChild("Slide")
     local plate = slide and slide:FindFirstChild("Plate")
+    return plate and plate:FindFirstChild("Title")
+end
 
-    local title = plate and plate:FindFirstChild("Title")
-    local line1 = plate and plate:FindFirstChild("Line1")
+local function getDungeonProgressLabels()
+    local gameUI = PlayerGui:FindFirstChild("GameUI")
+    local dungeonBar = gameUI and gameUI:FindFirstChild("DungeonBar")
+    local progress = dungeonBar and dungeonBar:FindFirstChild("Progress")
+    local textFolder = progress and progress:FindFirstChild("Text")
 
-    return title, line1
+    local caption = textFolder and textFolder:FindFirstChild("Caption")
+    local value = textFolder and textFolder:FindFirstChild("Value")
+
+    return caption, value
 end
 
 local function normalizeNotifyText(value)
-    return string.upper(tostring(value or ""))
-        :gsub("%s+", "")
-        :gsub("[^%w]", "")
+    return string.upper(tostring(value or "")):gsub("%s+", "")
 end
 
 local function armBossNotificationSignals()
     BossDoorOpenedSignal = false
     BossDefeatedSignal = false
+    BossDefeatedSignalPending = false
+    BossSignalGeneration += 1
 
-    local title, line1 = getNotifyLabels()
-
+    local title = getNotifyLabels()
     LastBossTitleObject = title
     LastBossTitleText = title and title.Text or ""
-
-    LastBossLineObject = line1
-    LastBossLineText = line1 and line1.Text or ""
 end
 
+-- FEST/X7 FloorGlow trigger:
+-- Caption = OPEN! AND Value = BOSS
+local function updateDungeonProgressSignals()
+    if BossDoorOpenedSignal then return end
+
+    local caption, value = getDungeonProgressLabels()
+    if not caption or not value then return end
+
+    local captionText = normalizeNotifyText(caption.Text)
+    local valueText = normalizeNotifyText(value.Text)
+
+    if captionText == "OPEN!" and valueText == "BOSS" then
+        BossDoorOpenedSignal = true
+        status("DUNGEON PROGRESS | OPEN! + BOSS | FloorGlow aktif")
+    end
+end
+
+-- BossExit tetap hanya dari NotifyFeed Title = BOSS DEFEATED!
 local function updateBossNotificationSignals()
-    local title, line1 = getNotifyLabels()
+    local title = getNotifyLabels()
+    if not title then return end
 
-    if title then
-        local currentText = title.Text or ""
+    local currentText = title.Text or ""
 
-        if title ~= LastBossTitleObject
-            or currentText ~= LastBossTitleText then
+    if title ~= LastBossTitleObject or currentText ~= LastBossTitleText then
+        local normalized = normalizeNotifyText(currentText)
 
-            local normalized = normalizeNotifyText(currentText)
+        if normalized == "BOSSDEFEATED!"
+            and not BossDefeatedSignal
+            and not BossDefeatedSignalPending then
 
-            if normalized:find("BOSSDEFEATED", 1, true) then
+            BossDefeatedSignalPending = true
+            local generation = BossSignalGeneration
+
+            task.delay(1.5, function()
+                if generation ~= BossSignalGeneration then return end
+                BossDefeatedSignalPending = false
                 BossDefeatedSignal = true
-            end
-
-            LastBossTitleObject = title
-            LastBossTitleText = currentText
+            end)
         end
-    end
 
-    if line1 then
-        local currentText = line1.Text or ""
-
-        if line1 ~= LastBossLineObject
-            or currentText ~= LastBossLineText then
-
-            local normalized = normalizeNotifyText(currentText)
-
-            if normalized:find("THEBOSSDOORISOPEN", 1, true) then
-                BossDoorOpenedSignal = true
-            end
-
-            LastBossLineObject = line1
-            LastBossLineText = currentText
-        end
+        LastBossTitleObject = title
+        LastBossTitleText = currentText
     end
 end
+
 --============================================================
 -- DIRECT MOVETO
 --============================================================
@@ -1628,8 +1640,9 @@ local function findUmbra()
     return nil
 end
 
--- Eclipse only: jalan menggunakan Pathfinding ke Umbra.
--- Tidak teleport dan tidak mengganti target ke mob lain.
+-- Eclipse only: gunakan pola AUTO PATH FEST/X7 yang sama untuk menuju Umbra.
+-- Waypoint, jarak recompute, dan gerakan MoveTo disamakan dengan AutoPath.
+-- Tidak ada recovery lompat/gerak menyamping; jika macet, jalur dihitung ulang.
 local function walkToUmbra(mob, runId, isAlive)
     if not mob or not mob.Parent or isDead(mob) then return false end
 
@@ -1639,21 +1652,35 @@ local function walkToUmbra(mob, runId, isAlive)
     local oldSpeed = Humanoid.WalkSpeed
     Humanoid.WalkSpeed = 36
 
-    local lastCompute = 0
-    local lastTargetPosition = nil
-    local blockedConnection = nil
     local waypoints = nil
     local waypointIndex = 1
+    local lastCompute = 0
+    local lastTargetPosition = nil
+    local lastMoveCommand = 0
+    local currentDestination = nil
+    local blockedConnection = nil
+    local lastProgressPosition = Root.Position
+    local lastProgressTime = os.clock()
     local reached = false
 
-    local function cleanup()
+    local function clearPath()
+        waypoints = nil
+        waypointIndex = 1
+        currentDestination = nil
+        lastTargetPosition = nil
+
         if blockedConnection then
             blockedConnection:Disconnect()
             blockedConnection = nil
         end
+    end
+
+    local function cleanup()
+        clearPath()
         updateCharacter()
         if Humanoid then
             Humanoid:MoveTo(Root and Root.Position or Vector3.zero)
+            Humanoid.Jump = false
             Humanoid.WalkSpeed = oldSpeed
         end
     end
@@ -1673,27 +1700,40 @@ local function walkToUmbra(mob, runId, isAlive)
             continue
         end
 
+        local now = os.clock()
         local distance = (Root.Position - mobRoot.Position).Magnitude
+
         if distance <= 10 then
             reached = true
             break
         end
 
+        -- Sama pola deteksi progres AutoPath FEST/X7.
+        if (Root.Position - lastProgressPosition).Magnitude >= 2.5 then
+            lastProgressPosition = Root.Position
+            lastProgressTime = now
+        elseif now - lastProgressTime >= 2.8 then
+            -- Jangan lompat atau bergerak ke samping; reset dan hitung ulang jalur.
+            clearPath()
+            lastCompute = 0
+            lastProgressPosition = Root.Position
+            lastProgressTime = now
+            task.wait(0.08)
+            continue
+        end
+
         local targetMoved = not lastTargetPosition
-            or (mobRoot.Position - lastTargetPosition).Magnitude >= 8
-        local shouldRecompute = not waypoints
+            or (mobRoot.Position - lastTargetPosition).Magnitude >= 10
+
+        local routeFinished = not waypoints
             or waypointIndex > #waypoints
-            or targetMoved
-            or os.clock() - lastCompute >= 2.5
 
-        if shouldRecompute and os.clock() - lastCompute >= 0.25 then
-            lastCompute = os.clock()
+        local shouldRecompute = routeFinished or targetMoved
+            or (now - lastCompute >= 2 and not currentDestination)
+
+        if shouldRecompute and now - lastCompute >= 0.35 then
+            lastCompute = now
             lastTargetPosition = mobRoot.Position
-
-            if blockedConnection then
-                blockedConnection:Disconnect()
-                blockedConnection = nil
-            end
 
             local path = PathfindingService:CreatePath({
                 AgentRadius = 2,
@@ -1701,52 +1741,73 @@ local function walkToUmbra(mob, runId, isAlive)
                 AgentCanJump = true,
                 AgentJumpHeight = 12,
                 AgentMaxSlope = 45,
-                WaypointSpacing = 6,
+                WaypointSpacing = 7,
             })
 
             local ok = pcall(function()
                 path:ComputeAsync(Root.Position, mobRoot.Position)
             end)
 
+            if blockedConnection then
+                blockedConnection:Disconnect()
+                blockedConnection = nil
+            end
+
             if ok and path.Status == Enum.PathStatus.Success then
                 waypoints = path:GetWaypoints()
                 waypointIndex = math.min(2, #waypoints)
+                currentDestination = nil
+
                 blockedConnection = path.Blocked:Connect(function(blockedIndex)
                     if blockedIndex >= waypointIndex then
-                        waypoints = nil
                         lastCompute = 0
+                        currentDestination = nil
                     end
                 end)
             else
-                -- Fallback tetap berjalan menuju Umbra, bukan teleport.
                 waypoints = nil
-                Humanoid:MoveTo(mobRoot.Position)
+                waypointIndex = 1
+                currentDestination = mobRoot.Position
             end
         end
 
         local destination = mobRoot.Position
-        local action
+        local waypointAction = nil
+
         if waypoints and waypoints[waypointIndex] then
-            destination = waypoints[waypointIndex].Position
-            action = waypoints[waypointIndex].Action
-            if (Root.Position - destination).Magnitude <= 4 then
+            local waypoint = waypoints[waypointIndex]
+            destination = waypoint.Position
+            waypointAction = waypoint.Action
+
+            if (Root.Position - destination).Magnitude <= 4.5 then
                 waypointIndex += 1
+
                 if waypoints[waypointIndex] then
-                    destination = waypoints[waypointIndex].Position
-                    action = waypoints[waypointIndex].Action
+                    waypoint = waypoints[waypointIndex]
+                    destination = waypoint.Position
+                    waypointAction = waypoint.Action
                 else
                     destination = mobRoot.Position
                 end
             end
         end
 
-        if action == Enum.PathWaypointAction.Jump then
+        -- Lompat hanya jika waypoint path memang meminta Jump.
+        if waypointAction == Enum.PathWaypointAction.Jump then
             Humanoid.Jump = true
         end
 
-        Humanoid:MoveTo(destination)
-        status("ECLIPSE | RUN PATH KE UMBRA | " .. math.floor(distance) .. " studs")
-        task.wait(0.12)
+        if not currentDestination
+            or (currentDestination - destination).Magnitude > 2
+            or now - lastMoveCommand >= 1 then
+
+            Humanoid:MoveTo(destination)
+            currentDestination = destination
+            lastMoveCommand = now
+        end
+
+        status("ECLIPSE | AUTO PATH KE UMBRA | " .. math.floor(distance) .. " studs")
+        task.wait(0.08)
     end
 
     cleanup()
@@ -2419,6 +2480,7 @@ local function runOneDungeon(id)
 
     -- Tunggu notifikasi pintu boss terbuka.
     while alive(id) do
+        updateDungeonProgressSignals()
         updateBossNotificationSignals()
 
         if BossDefeatedSignal then
@@ -2429,19 +2491,20 @@ local function runOneDungeon(id)
             break
         end
 
-        status("Farming | Menunggu THE BOSS DOOR IS OPEN...")
+        status("Farming | Menunggu DungeonBar OPEN! + BOSS...")
         task.wait(0.05)
     end
 
     if not alive(id) then return false end
 
-    status("THE BOSS DOOR IS OPEN | Mencari FloorGlow...")
+    status("DungeonBar OPEN! + BOSS | Mencari FloorGlow...")
 
     -- Tunggu FloorGlow sampai benar-benar muncul.
     -- Tidak menggunakan timeout agar tidak melewatkan FloorGlow.
     local floorGlow
 
     while alive(id) do
+        updateDungeonProgressSignals()
         updateBossNotificationSignals()
 
         if BossDefeatedSignal then
@@ -2454,7 +2517,7 @@ local function runOneDungeon(id)
             break
         end
 
-        status("Boss Door Open | Menunggu FloorGlow muncul...")
+        status("Progress OPEN! + BOSS | Menunggu FloorGlow muncul...")
         task.wait(0.05)
     end
 
