@@ -23,14 +23,48 @@ local SwingRemote = Remotes:WaitForChild("Swing")
 local HitRemote = Remotes:WaitForChild("Hit")
 local RequestRemote = Remotes:WaitForChild("Request")
 
+
+--============================================================
+-- FORCE MOVEMENT RESET
+-- Dipakai saat FEST / X7 / ECLIPSE OFF
+--============================================================
+
+local function forceMovementReset()
+    local p = game:GetService("Players").LocalPlayer
+    local h = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+
+    if h then
+        pcall(function()
+            h:Move(Vector3.zero, false)
+            h.WalkSpeed = 36
+            h.Jump = false
+            h.AutoRotate = true
+        end)
+    end
+
+    local vim = game:GetService("VirtualInputManager")
+
+    for _, key in ipairs({
+        Enum.KeyCode.W,
+        Enum.KeyCode.A,
+        Enum.KeyCode.S,
+        Enum.KeyCode.D,
+        Enum.KeyCode.Space
+    }) do
+        pcall(function()
+            vim:SendKeyEvent(false, key, false, game)
+        end)
+    end
+end
+
 --============================================================
 -- CONFIG
 --============================================================
 
 local MODE_CONFIG = {
     FEST = {
-        POS1 = Vector3.new(204.60000610351562, 3.1980252265930176, 31.600006103515625),
-        POS2 = Vector3.new(208.82321166992188, 3.428025007247925, 32.27003479003906),
+        POS1 = Vector3.new(-13.289637565612793, 3998.970947265625, 194.20899963378906),
+        POS2 = Vector3.new(-13.061117172241211, 3999.201171875, 203.30621337890625),
         DUNGEON = "FEST",
         COUNT = 4,
         BOSS = "The Parade Master",
@@ -461,40 +495,65 @@ local function getNearestMob()
 end
 
 --============================================================
--- AUTO PATH
+-- AUTO PATH | SAFE RESTART + WORKER OWNERSHIP
 --============================================================
 
 local AutoPathRunning = false
 local AutoPathTarget = nil
 local AutoPathOldSpeed = nil
 
+local AutoPathGeneration = 0
+local AutoPathWorkerActive = false
+local AutoPathRestartPending = false
+
 local function startAutoPath()
-    if AutoPathRunning then return end
+    if not Running then return end
+
     AutoPathRunning = true
 
+    if AutoPathWorkerActive then
+        AutoPathRestartPending = true
+        return
+    end
+
+    AutoPathWorkerActive = true
+    AutoPathRestartPending = false
+
+    AutoPathGeneration += 1
+    local myGeneration = AutoPathGeneration
+
     task.spawn(function()
-        local waypoints = nil
+        local waypoints
         local waypointIndex = 1
         local lastCompute = 0
-        local lastTargetPosition = nil
+        local lastTargetPosition
         local lastMoveCommand = 0
-        local currentDestination = nil
-        local pathBlockedConnection = nil
-        local lastProgressPosition = nil
+        local currentDestination
+        local pathBlockedConnection
+        local lastProgressPosition
         local lastProgressTime = os.clock()
+        local oldSpeed
+        local workerHumanoid
+
+        local function ownsWorker()
+            return Running
+                and AutoPathRunning
+                and AutoPathGeneration == myGeneration
+        end
 
         local function clearPath()
             waypoints = nil
             waypointIndex = 1
             currentDestination = nil
             lastTargetPosition = nil
+
             if pathBlockedConnection then
                 pathBlockedConnection:Disconnect()
                 pathBlockedConnection = nil
             end
         end
 
-        while Running and AutoPathRunning do
+        while ownsWorker() do
             updateCharacter()
 
             local dungeonAttribute = Player:GetAttribute("Dungeon")
@@ -502,8 +561,10 @@ local function startAutoPath()
                 and dungeonAttribute ~= false
                 and dungeonAttribute ~= ""
 
-            if not inDungeon or EclipsePaused or EclipsePriority or EclipseInRun
-                or IsGoingToFloorGlow or BossPhaseActive or not (AutoFest or AutoX7) then
+            if not inDungeon or EclipsePaused or EclipsePriority
+                or EclipseInRun or IsGoingToFloorGlow
+                or BossPhaseActive or not (AutoFest or AutoX7) then
+
                 clearPath()
                 task.wait(0.2)
                 continue
@@ -514,20 +575,28 @@ local function startAutoPath()
                 continue
             end
 
-            if not AutoPathOldSpeed then
-                AutoPathOldSpeed = Humanoid.WalkSpeed
+            if workerHumanoid ~= Humanoid then
+                workerHumanoid = Humanoid
+                oldSpeed = Humanoid.WalkSpeed
+                AutoPathOldSpeed = oldSpeed
+                clearPath()
             end
+
             Humanoid.WalkSpeed = 36
 
             if not AutoPathTarget or not AutoPathTarget.Parent
-                or isDead(AutoPathTarget) or not getMobRoot(AutoPathTarget) then
+                or isDead(AutoPathTarget)
+                or not getMobRoot(AutoPathTarget) then
+
                 AutoPathTarget = getNearestMob()
                 clearPath()
                 lastCompute = 0
+                lastProgressPosition = nil
             end
 
             local target = AutoPathTarget
             local targetRoot = target and getMobRoot(target)
+
             if not targetRoot then
                 Humanoid:MoveTo(Root.Position)
                 status("AUTO PATH | Mencari mob...")
@@ -537,9 +606,6 @@ local function startAutoPath()
 
             local distance = (Root.Position - targetRoot.Position).Magnitude
 
-            -- Recovery jika karakter tidak bergerak mendekati target.
-            -- Jarak 59 studs bukan batas berhenti; watchdog ini mendeteksi
-            -- MoveTo/path yang macet lalu memaksa hitung jalur ulang.
             if not lastProgressPosition then
                 lastProgressPosition = Root.Position
                 lastProgressTime = os.clock()
@@ -549,13 +615,13 @@ local function startAutoPath()
             elseif distance > 10 and os.clock() - lastProgressTime >= 2.8 then
                 clearPath()
                 lastCompute = 0
-                currentDestination = nil
                 lastProgressPosition = Root.Position
                 lastProgressTime = os.clock()
+
                 Humanoid.Jump = true
                 Humanoid:MoveTo(targetRoot.Position)
-                status("AUTO PATH | Jalur macet, mencari jalan ulang | "
-                    .. math.floor(distance) .. " studs")
+
+                status("AUTO PATH | Recovery jalur...")
                 task.wait(0.12)
                 continue
             end
@@ -570,9 +636,13 @@ local function startAutoPath()
 
             local targetMoved = not lastTargetPosition
                 or (targetRoot.Position - lastTargetPosition).Magnitude >= 10
-            local routeFinished = not waypoints or waypointIndex > #waypoints
+
+            local routeFinished = not waypoints
+                or waypointIndex > #waypoints
+
             local shouldRecompute = routeFinished or targetMoved
-                or (os.clock() - lastCompute >= 2.0 and not currentDestination)
+                or (os.clock() - lastCompute >= 2
+                    and not currentDestination)
 
             if shouldRecompute and os.clock() - lastCompute >= 0.35 then
                 lastCompute = os.clock()
@@ -600,8 +670,9 @@ local function startAutoPath()
                     waypoints = path:GetWaypoints()
                     waypointIndex = math.min(2, #waypoints)
                     currentDestination = nil
+
                     pathBlockedConnection = path.Blocked:Connect(function(blockedIndex)
-                        if blockedIndex >= waypointIndex then
+                        if ownsWorker() and blockedIndex >= waypointIndex then
                             lastCompute = 0
                             currentDestination = nil
                         end
@@ -614,15 +685,17 @@ local function startAutoPath()
             end
 
             local destination = targetRoot.Position
-            local waypointAction = nil
+            local waypointAction
+
             if waypoints and waypoints[waypointIndex] then
                 local waypoint = waypoints[waypointIndex]
+
                 destination = waypoint.Position
                 waypointAction = waypoint.Action
 
                 if (Root.Position - destination).Magnitude <= 4.5 then
                     waypointIndex += 1
-                    currentDestination = nil
+
                     if waypoints[waypointIndex] then
                         destination = waypoints[waypointIndex].Position
                         waypointAction = waypoints[waypointIndex].Action
@@ -636,41 +709,61 @@ local function startAutoPath()
                 Humanoid.Jump = true
             end
 
-            -- Jangan reset MoveTo setiap 0.15s; itu bikin karakter tersendat.
             if not currentDestination
                 or (currentDestination - destination).Magnitude > 2
-                or os.clock() - lastMoveCommand >= 1.0 then
+                or os.clock() - lastMoveCommand >= 1 then
+
                 Humanoid:MoveTo(destination)
                 currentDestination = destination
                 lastMoveCommand = os.clock()
             end
 
-            status("AUTO PATH | " .. target.Name .. " | " .. math.floor(distance) .. " studs")
+            status("AUTO PATH | " .. target.Name
+                .. " | " .. math.floor(distance) .. " studs")
+
             task.wait(0.08)
         end
 
-        if pathBlockedConnection then
-            pathBlockedConnection:Disconnect()
-            pathBlockedConnection = nil
-        end
+        clearPath()
 
+        -- Hanya worker yang masih memiliki karakter yang boleh cleanup.
         updateCharacter()
+
         if Humanoid then
             Humanoid:MoveTo(Root and Root.Position or Vector3.zero)
-            if AutoPathOldSpeed then
-                Humanoid.WalkSpeed = AutoPathOldSpeed
+
+            if workerHumanoid == Humanoid and oldSpeed then
+                Humanoid.WalkSpeed = oldSpeed
             end
         end
 
-        AutoPathOldSpeed = nil
-        AutoPathTarget = nil
-        AutoPathRunning = false
+        if AutoPathGeneration == myGeneration then
+            AutoPathTarget = nil
+            AutoPathOldSpeed = nil
+        end
+
+        AutoPathWorkerActive = false
+
+        -- Jika toggle dinyalakan lagi saat worker lama cleanup,
+        -- jalankan worker baru setelah cleanup selesai.
+        if Running and AutoPathRunning and AutoPathRestartPending then
+            AutoPathRestartPending = false
+            startAutoPath()
+        end
     end)
 end
 
 local function stopAutoPath()
     AutoPathRunning = false
+    AutoPathRestartPending = false
+    AutoPathGeneration += 1
     AutoPathTarget = nil
+
+    updateCharacter()
+
+    if Humanoid and Root then
+        Humanoid:MoveTo(Root.Position)
+    end
 end
 
 --============================================================
@@ -720,7 +813,87 @@ local function getActiveFloorGlow()
 
     return nil
 end
+--============================================================
+-- BOSS NOTIFICATION DETECTION
+--============================================================
 
+local BossDoorOpenedSignal = false
+local BossDefeatedSignal = false
+
+local LastBossTitleObject = nil
+local LastBossTitleText = ""
+local LastBossLineObject = nil
+local LastBossLineText = ""
+
+local function getNotifyLabels()
+    local feed = PlayerGui:FindFirstChild("NotifyFeed")
+    local card = feed and feed:FindFirstChild("Feed")
+    local slide = card and card:FindFirstChild("Card")
+    slide = slide and slide:FindFirstChild("Slide")
+    local plate = slide and slide:FindFirstChild("Plate")
+
+    local title = plate and plate:FindFirstChild("Title")
+    local line1 = plate and plate:FindFirstChild("Line1")
+
+    return title, line1
+end
+
+local function normalizeNotifyText(value)
+    return string.upper(tostring(value or ""))
+        :gsub("%s+", "")
+        :gsub("[^%w]", "")
+end
+
+local function armBossNotificationSignals()
+    BossDoorOpenedSignal = false
+    BossDefeatedSignal = false
+
+    local title, line1 = getNotifyLabels()
+
+    LastBossTitleObject = title
+    LastBossTitleText = title and title.Text or ""
+
+    LastBossLineObject = line1
+    LastBossLineText = line1 and line1.Text or ""
+end
+
+local function updateBossNotificationSignals()
+    local title, line1 = getNotifyLabels()
+
+    if title then
+        local currentText = title.Text or ""
+
+        if title ~= LastBossTitleObject
+            or currentText ~= LastBossTitleText then
+
+            local normalized = normalizeNotifyText(currentText)
+
+            if normalized:find("BOSSDEFEATED", 1, true) then
+                BossDefeatedSignal = true
+            end
+
+            LastBossTitleObject = title
+            LastBossTitleText = currentText
+        end
+    end
+
+    if line1 then
+        local currentText = line1.Text or ""
+
+        if line1 ~= LastBossLineObject
+            or currentText ~= LastBossLineText then
+
+            local normalized = normalizeNotifyText(currentText)
+
+            if normalized:find("THEBOSSDOORISOPEN", 1, true) then
+                BossDoorOpenedSignal = true
+            end
+
+            LastBossLineObject = line1
+            LastBossLineText = currentText
+        end
+    end
+end
 --============================================================
 -- DIRECT MOVETO
 --============================================================
@@ -1675,18 +1848,25 @@ local function restoreModesAfterEclipse()
     status("ECLIPSE SELESAI | Mode sebelumnya restart")
 end
 
+
 local function stopEclipse()
     AutoEclipse = false
     setToggle("AUTO ECLIPSE", false)
 
     if not EclipseInRun then
         EclipseRunId += 1
+
+        forceMovementReset()
         restoreModesAfterEclipse()
+
         status("AUTO ECLIPSE OFF")
     else
+        -- Eclipse aktif diselesaikan dahulu.
+        -- Reset dilakukan setelah orbit/combat berhenti.
         status("AUTO ECLIPSE OFF | Menyelesaikan Eclipse aktif...")
     end
 end
+
 
 --============================================================
 -- AUTO ECLIPSE
@@ -2064,8 +2244,14 @@ local function startEclipse()
         end
 
         EclipseInRun = false
-        setDevSwing(false)
-        restoreModesAfterEclipse()
+setDevSwing(false)
+
+if not AutoEclipse then
+    forceMovementReset()
+end
+
+restoreModesAfterEclipse()
+        
 
         if EclipseRunId == id then
             AutoEclipse = false
@@ -2075,72 +2261,40 @@ local function startEclipse()
 end
 
 --============================================================
--- FINISH BOSS PHASE
+-- BOSS DEFEATED | STOP + BOSS EXIT
 --============================================================
 
-local function finishBossPhase(id)
-    if not BossPhaseActive then return false end
+local function exitAfterBossDefeated(id)
+    if not alive(id) then return false end
 
+    -- Matikan DevSwing terlebih dahulu.
+    setDevSwing(false)
+
+    status("BOSS DEFEATED! | Mematikan combat dan menuju BossExit...")
+
+    -- Hentikan seluruh aktivitas combat.
     stopAutoPath()
-    setAutoDodge(false)
-
-    -- Orbit langsung aktif setelah TP FloorGlow. Tidak mencari FloorGlow lagi.
-    startBossOrbit(id, nil, "DUNGEON")
-    status("FloorGlow selesai | Orbit aktif, menunggu Enemies...")
-
-    local sawEnemies = false
-    local emptySince = nil
-
-    while alive(id) do
-        local enemies = Workspace:FindFirstChild("Enemies")
-        local enemyCount = enemies and #enemies:GetChildren() or 0
-
-        if enemyCount > 0 then
-            sawEnemies = true
-            emptySince = nil
-            status("Orbit aktif | Menunggu boss selesai | Enemies: " .. tostring(enemyCount))
-        elseif sawEnemies then
-            if not emptySince then
-                emptySince = os.clock()
-            end
-
-            local emptyFor = os.clock() - emptySince
-            if emptyFor >= 3 then
-                break
-            end
-            status("Enemies kosong | Konfirmasi " .. string.format("%.1f", emptyFor) .. "/5 detik")
-        else
-            status("Orbit aktif | Menunggu boss/mob muncul di workspace.Enemies...")
-        end
-
-        task.wait(0.12)
-    end
-
-    if not alive(id) then
-        stopBossOrbit()
-        return false
-    end
-
-    -- Combat dan orbit berhenti setelah Enemies kosong 5 detik.
     setFestCombat(false)
+    setAutoDodge(false)
     stopBossOrbit()
+
+    updateCharacter()
 
     local bossExit = getDungeonObject({"Markers", "BossExit"})
     local exitPosition = getObjectPosition(bossExit)
 
     if not exitPosition then
-        status("BossExit tidak ditemukan: Workspace.Dungeons."
-            .. tostring(ActiveConfig.DUNGEON) .. ".Markers.BossExit")
+        status("BOSS DEFEATED! | BossExit tidak ditemukan")
         return false
     end
 
-    updateCharacter()
     if not Root then return false end
 
-    status("Enemies kosong 3 detik | TP ke BossExit...")
     local oldCF = Root.CFrame
+
     Root.CFrame = CFrame.new(exitPosition + Vector3.new(0, 3, 0))
         * (oldCF - oldCF.Position)
+
     Root.AssemblyLinearVelocity = Vector3.zero
     Root.AssemblyAngularVelocity = Vector3.zero
 
@@ -2148,7 +2302,7 @@ local function finishBossPhase(id)
     updateCharacter()
 
     if not Root or (Root.Position - exitPosition).Magnitude > 10 then
-        status("TP BossExit tidak terkonfirmasi")
+        status("BossExit TP tidak terkonfirmasi")
         return false
     end
 
@@ -2157,13 +2311,38 @@ local function finishBossPhase(id)
     IsGoingToFloorGlow = false
     CurrentDungeonTarget = nil
 
-    status(ActiveConfig.DUNGEON .. " berhasil keluar | Siapkan POS1...")
+    status("BOSS DEFEATED! | Berhasil ke BossExit")
+
     task.wait(1)
     return true
 end
 
+local function finishBossPhase(id)
+    if not BossPhaseActive then return false end
+
+    stopAutoPath()
+    setAutoDodge(false)
+
+    startBossOrbit(id, nil, "DUNGEON")
+
+    status("Boss Orbit aktif | Menunggu notifikasi BOSS DEFEATED!")
+
+    while alive(id) do
+        updateBossNotificationSignals()
+
+        if BossDefeatedSignal then
+            return exitAfterBossDefeated(id)
+        end
+
+        task.wait(0.05)
+    end
+
+    stopBossOrbit()
+    return false
+end
+
 --============================================================
--- RUN ONE DUNGEON
+-- RUN ONE DUNGEON | NOTIFICATION BASED
 --============================================================
 
 local function runOneDungeon(id)
@@ -2204,6 +2383,9 @@ local function runOneDungeon(id)
     task.wait(2)
     if not alive(id) then return false end
 
+    -- Simpan kondisi notifikasi sebelum dungeon dimulai.
+    armBossNotificationSignals()
+
     status("EnterDungeon " .. ActiveConfig.DUNGEON
         .. " | Star " .. tostring(ActiveConfig.COUNT) .. "...")
 
@@ -2234,130 +2416,116 @@ local function runOneDungeon(id)
     startAutoPath()
 
     status(ActiveConfig.DUNGEON .. " masuk | Auto Hit + Skill ON")
-    task.wait(0.3)
 
-    local floorGlow
-
+    -- Tunggu notifikasi pintu boss terbuka.
     while alive(id) do
-        updateCharacter()
+        updateBossNotificationSignals()
 
-        local dungeonBar = PlayerGui:FindFirstChild("GameUI")
-            and PlayerGui.GameUI:FindFirstChild("DungeonBar")
-
-        local progress = dungeonBar and dungeonBar:FindFirstChild("Progress")
-        local progressContent = ""
-
-        if progress then
-            if progress:IsA("TextLabel") or progress:IsA("TextButton") then
-                progressContent ..= " " .. tostring(progress.Text)
-            end
-
-            for _, obj in ipairs(progress:GetDescendants()) do
-                if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-                    progressContent ..= " " .. tostring(obj.Text)
-                end
-            end
+        if BossDefeatedSignal then
+            return exitAfterBossDefeated(id)
         end
 
-        local normalized = string.upper(progressContent)
-            :gsub("%s+", "")
-            :gsub("[^%w!]", "")
-
-        local progressOpen =
-            string.find(normalized, "BOSSOPEN", 1, true)
-            or string.find(normalized, "OPEN!", 1, true)
-
-        if progressOpen then
-            status("BOSS OPEN! Mencari FloorGlow...")
-
-            floorGlow = getActiveFloorGlow()
-
-            if floorGlow then
-                status("BOSS OPEN! FloorGlow ditemukan: "
-                    .. ActiveConfig.DUNGEON)
-                break
-            end
-
-            status("FloorGlow belum muncul | Mencari ulang...")
+        if BossDoorOpenedSignal then
+            break
         end
 
-        task.wait(0.15)
+        status("Farming | Menunggu THE BOSS DOOR IS OPEN...")
+        task.wait(0.05)
     end
 
     if not alive(id) then return false end
 
-    do
-        -- Boss bisa spawn lebih dulu dari pembacaan progress UI.
-        -- Tetap cari dan TP ke FloorGlow sebelum mulai orbit boss.
-        floorGlow = floorGlow or getActiveFloorGlow()
-        local glowDeadline = os.clock() + 15
-        while alive(id) and not floorGlow and os.clock() < glowDeadline do
-            floorGlow = getActiveFloorGlow()
-            if not floorGlow then task.wait(0.2) end
+    status("THE BOSS DOOR IS OPEN | Mencari FloorGlow...")
+
+    -- Tunggu FloorGlow sampai benar-benar muncul.
+    -- Tidak menggunakan timeout agar tidak melewatkan FloorGlow.
+    local floorGlow
+
+    while alive(id) do
+        updateBossNotificationSignals()
+
+        if BossDefeatedSignal then
+            return exitAfterBossDefeated(id)
         end
 
-        local glowPosition = getObjectPosition(floorGlow)
+        floorGlow = getActiveFloorGlow()
 
-        if not glowPosition then
-            status("FloorGlow tidak ditemukan di Workspace.Dungeons."
-                .. ActiveConfig.DUNGEON .. ".BossDoor.FloorGlow")
-            return false
+        if floorGlow and floorGlow.Parent then
+            break
         end
 
-        FLOOR_GLOW_POS = glowPosition
-
-        -- Teleport langsung ke FloorGlow, bukan jalan jauh ke koordinat lama.
-        updateCharacter()
-
-        if not Root then return false end
-
-        IsGoingToFloorGlow = true
-        stopAutoPath()
-
-        status("TP ke FloorGlow " .. ActiveConfig.DUNGEON .. "...")
-
-        local oldCF = Root.CFrame
-        local targetPosition = floorGlow.Position + Vector3.new(0, 3, 0)
-
-        Root.CFrame = CFrame.new(targetPosition)
-            * (oldCF - oldCF.Position)
-
-        Root.AssemblyLinearVelocity = Vector3.zero
-        Root.AssemblyAngularVelocity = Vector3.zero
-
-        -- Satu kali teleport ke FloorGlow. Setelah itu game/server yang
-        -- memindahkan karakter ke Boss Room; script tidak TP ulang.
-        task.wait(0.35)
-        updateCharacter()
-
-        local verified = Root
-            and (Root.Position - floorGlow.Position).Magnitude <= 8
-
-        IsGoingToFloorGlow = false
-
-        if not verified then
-            status("TP FloorGlow tidak terkonfirmasi")
-            return false
-        end
-
-        BossPhaseActive = true
-        BossPhaseDelayDone = false
-
-        status("FloorGlow tersentuh | Menunggu sistem masuk Boss Room...")
+        status("Boss Door Open | Menunggu FloorGlow muncul...")
+        task.wait(0.05)
     end
 
+    if not alive(id) then return false end
+
+    updateBossNotificationSignals()
+
+    if BossDefeatedSignal then
+        return exitAfterBossDefeated(id)
+    end
+
+    if not floorGlow or not floorGlow.Parent then
+        return false
+    end
+
+    -- Langsung teleport saat FloorGlow tersedia.
     stopAutoPath()
-    setAutoDodge(false)
+    IsGoingToFloorGlow = true
+
+    updateCharacter()
+
+    if not Root then
+        IsGoingToFloorGlow = false
+        return false
+    end
+
+    status("FloorGlow muncul | Teleport sekarang...")
+
+    local oldCF = Root.CFrame
+    local targetPosition = floorGlow.Position + Vector3.new(0, 3, 0)
+
+    Root.CFrame = CFrame.new(targetPosition)
+        * (oldCF - oldCF.Position)
+
+    Root.AssemblyLinearVelocity = Vector3.zero
+    Root.AssemblyAngularVelocity = Vector3.zero
+
+    task.wait(0.35)
+
+    updateBossNotificationSignals()
+
+    if BossDefeatedSignal then
+        IsGoingToFloorGlow = false
+        return exitAfterBossDefeated(id)
+    end
+
+    updateCharacter()
+
+    local verified = Root
+        and (Root.Position - floorGlow.Position).Magnitude <= 8
+
+    IsGoingToFloorGlow = false
+
+    if not verified then
+        status("TP FloorGlow tidak terkonfirmasi")
+        return false
+    end
+
+    BossPhaseActive = true
+    BossPhaseDelayDone = false
+
+    status("FloorGlow tersentuh | Boss Orbit aktif")
 
     return finishBossPhase(id)
 end
 
 --============================================================
--- STOP MODE
+-- STOP MODE | FEST/X7 TANPA MEMATIKAN SKILL & HIT
 --============================================================
 
 local function stopMode(mode)
-    setDevSwing(false)
     if mode == "FEST" then
         AutoFest = false
         FestRunId += 1
@@ -2366,81 +2534,99 @@ local function stopMode(mode)
         AutoX7 = false
         X7RunId += 1
         setToggle("AUTO X7", false)
+    else
+        return
     end
 
-    if EclipsePaused then
-        if mode == "FEST" then
-            EclipseSavedFest = false
-        else
-            EclipseSavedX7 = false
-        end
-    else
-        stopAutoPath()
-        setFestCombat(false)
-    end
+    -- Jangan panggil setFestCombat(false) di sini.
+    -- Jangan panggil setDevSwing(false) di sini.
+    -- Skill dan Hit harus tetap mengikuti toggle masing-masing.
+
+    stopAutoPath()
+    setAutoDodge(false)
+    task.delay(0.2, forceMovementReset)
 
     BossPhaseActive = false
     BossPhaseDelayDone = false
     IsGoingToFloorGlow = false
+    CurrentDungeonTarget = nil
 
+    stopBossOrbit()
+
+    -- Reset gerakan agar karakter tidak terkunci.
     updateCharacter()
 
-    if Humanoid and Root then
-        Humanoid:MoveTo(Root.Position)
-    end
-
-    if not EclipsePaused then
-        ModeStopping = true
-        ModeStopId += 1
-
-        local stopId = ModeStopId
-
-        status("AUTO " .. mode .. " OFF | Keluar dungeon...")
-
-        task.spawn(function()
-            if Player:GetAttribute("Dungeon") then
-                for _ = 1, 8 do
-                    if not Running or ModeStopId ~= stopId then
-                        return
-                    end
-
-                    if not Player:GetAttribute("Dungeon") then
-                        break
-                    end
-
-                    pcall(function()
-                        RequestRemote:InvokeServer("LeaveDungeon")
-                    end)
-
-                    local deadline = os.clock() + 2
-
-                    while Running
-                        and ModeStopId == stopId
-                        and Player:GetAttribute("Dungeon")
-                        and os.clock() < deadline do
-
-                        task.wait(0.1)
-                    end
-                end
-            end
-
-            if ModeStopId == stopId then
-                ModeStopping = false
-                status("AUTO " .. mode .. " OFF | Siap mulai ulang")
-
-                local pending = PendingMode
-                PendingMode = nil
-
-                if pending and Running then
-                    task.wait(0.2)
-                    startMode(pending)
-                end
-            end
+    if Humanoid then
+        pcall(function()
+            Humanoid:Move(Vector3.zero, false)
+            Humanoid.WalkSpeed = 36
+            Humanoid.Jump = false
+            Humanoid.AutoRotate = true
         end)
-    else
-        status("AUTO " .. mode .. " dihentikan")
     end
+
+    local vim = game:GetService("VirtualInputManager")
+
+    for _, key in ipairs({
+        Enum.KeyCode.W,
+        Enum.KeyCode.A,
+        Enum.KeyCode.S,
+        Enum.KeyCode.D,
+        Enum.KeyCode.Space
+    }) do
+        pcall(function()
+            vim:SendKeyEvent(false, key, false, game)
+        end)
+    end
+
+    ModeStopping = true
+    ModeStopId += 1
+
+    local stopId = ModeStopId
+
+    status("AUTO " .. mode .. " OFF | Keluar dungeon...")
+
+    task.spawn(function()
+        if Player:GetAttribute("Dungeon") then
+            for _ = 1, 8 do
+                if not Running or ModeStopId ~= stopId then
+                    return
+                end
+
+                if not Player:GetAttribute("Dungeon") then
+                    break
+                end
+
+                pcall(function()
+                    RequestRemote:InvokeServer("LeaveDungeon")
+                end)
+
+                local deadline = os.clock() + 2
+
+                while Running
+                    and ModeStopId == stopId
+                    and Player:GetAttribute("Dungeon")
+                    and os.clock() < deadline do
+                    task.wait(0.1)
+                end
+            end
+        end
+
+        if ModeStopId == stopId then
+            ModeStopping = false
+            status("AUTO " .. mode .. " OFF | Skill/Hit tetap aktif")
+
+            local pending = PendingMode
+            PendingMode = nil
+
+            if pending and Running then
+                task.wait(0.2)
+                startMode(pending)
+            end
+        end
+    end)
 end
+
 
 --============================================================
 -- START MODE
@@ -2466,10 +2652,10 @@ startMode = function(mode)
         if AutoFest then return end
 
         if AutoX7 then
-            stopMode("X7")
-            PendingMode = "FEST"
-            return
-        end
+    PendingMode = "FEST"
+    stopMode("X7")
+    return
+end
 
         setAutoDodge(false)
         ActiveMode = "FEST"
@@ -2544,10 +2730,10 @@ startMode = function(mode)
         end
 
         if AutoFest then
-            stopMode("FEST")
-            PendingMode = "X7"
-            return
-        end
+    PendingMode = "X7"
+    stopMode("FEST")
+    return
+end
 
         setAutoDodge(false)
         ActiveMode = "X7"
